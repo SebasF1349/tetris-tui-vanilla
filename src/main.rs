@@ -9,7 +9,8 @@ fn main() {
     board.start();
     let mut block = Block::new();
     loop {
-        board.add_block(block.y, block.x);
+        //board.add_block(block.y, block.x);
+        board.down();
         board.draw();
         block.down();
         if block.y == 5 {
@@ -38,6 +39,7 @@ struct Board {
     cols: usize,
     rows: usize,
     board: Vec<i32>,
+    block: (usize, usize),
 }
 
 impl Display for Board {
@@ -62,18 +64,25 @@ impl Board {
         self.board[self.cols * row + col] = 1;
     }
 
+    fn down(&mut self) {
+        self.board[self.cols * self.block.0 + self.block.1] = 0;
+        self.block.0 += 1;
+        self.board[self.cols * self.block.0 + self.block.1] = 1;
+    }
+
     fn new(cols: usize, rows: usize) -> Board {
         Board {
             cols,
             rows,
             board: vec![0; cols * rows],
+            block: (0, 0),
         }
     }
 
     fn start(&mut self) {
         hide_cursor();
         clear_screen();
-        self.board[4] = 1;
+        self.block = (0, 4);
         println!("{}", self);
     }
 
