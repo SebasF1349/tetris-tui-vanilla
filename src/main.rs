@@ -49,10 +49,15 @@ impl Display for Board {
             .iter()
             .enumerate()
             .fold("".to_string(), |acc, (pos, val)| {
-                if pos % self.cols == 0 {
-                    acc + "\n" + &val.to_string()
+                let text = if val == &0 {
+                    " ".to_string()
                 } else {
-                    acc + " " + &val.to_string()
+                    val.to_string()
+                };
+                if pos % self.cols == 0 {
+                    acc + "\n" + &text
+                } else {
+                    acc + " " + &text
                 }
             });
         write!(f, "{}", output)
