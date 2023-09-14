@@ -44,6 +44,11 @@ async fn print_events() {
                             board.draw();
                         }
 
+                        if event == Event::Key(KeyCode::Char('s').into()) {
+                            board.down();
+                            board.draw();
+                        }
+
                         if event == Event::Key(KeyCode::Esc.into()) {
                             break;
                         }
