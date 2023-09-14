@@ -1,24 +1,76 @@
-use std::{
-    fmt::{self, Display},
-    thread,
-    time::Duration,
+use std::{fmt, fmt::Display, io::stdout, time::Duration};
+
+use futures::{future::FutureExt, select, StreamExt};
+use futures_timer::Delay;
+
+use crossterm::{
+    cursor::position,
+    event::{DisableMouseCapture, EnableMouseCapture, Event, EventStream, KeyCode},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode},
 };
 
-fn main() {
+async fn print_events() {
     let mut board = Board::new(10, 10);
     board.start();
-    let mut block = Block::new();
+    let mut reader = EventStream::new();
+    let mut limit = 10;
+
     loop {
-        //board.add_block(block.y, block.x);
-        board.down();
-        board.draw();
-        block.down();
-        if block.y == 5 {
-            break;
-        }
-        thread::sleep(Duration::from_millis(1000));
+        let mut delay = Delay::new(Duration::from_millis(1_000)).fuse();
+        let mut event = reader.next().fuse();
+
+        select! {
+            _ = delay => {
+                limit -= 1;
+                if limit == 0 {
+                    break;
+                }
+                board.down();
+                board.draw();
+            },
+            maybe_event = event => {
+                match maybe_event {
+                    Some(Ok(event)) => {
+                        println!("Event::{:?}\r", event);
+
+                        if event == Event::Key(KeyCode::Char('a').into()) {
+                            board.left();
+                            board.draw();
+                        }
+
+                        if event == Event::Key(KeyCode::Char('d').into()) {
+                            board.right();
+                            board.draw();
+                        }
+
+                        if event == Event::Key(KeyCode::Esc.into()) {
+                            break;
+                        }
+                    }
+                    Some(Err(e)) => println!("Error: {:?}\r", e),
+                    None => break,
+                }
+            }
+        };
     }
-    board.end();
+}
+
+#[tokio::main]
+async fn main() -> std::io::Result<()> {
+    enable_raw_mode()?;
+
+    let mut stdout = stdout();
+    execute!(stdout, EnableMouseCapture)?;
+
+    print_events().await;
+
+    execute!(stdout, DisableMouseCapture)?;
+
+    clear_screen();
+    show_cursor();
+
+    disable_raw_mode()
 }
 
 struct Block {
@@ -27,11 +79,20 @@ struct Block {
 }
 
 impl Block {
-    fn new() -> Block {
-        Block { x: 4, y: 1 }
+    fn new(x: usize, y: usize) -> Block {
+        Block { x, y }
     }
+
     fn down(&mut self) {
         self.y += 1;
+    }
+
+    fn left(&mut self) {
+        self.x -= 1;
+    }
+
+    fn right(&mut self) {
+        self.x += 1;
     }
 }
 
@@ -39,7 +100,7 @@ struct Board {
     cols: usize,
     rows: usize,
     board: Vec<i32>,
-    block: (usize, usize),
+    block: Block,
 }
 
 impl Display for Board {
@@ -54,8 +115,9 @@ impl Display for Board {
                 } else {
                     val.to_string()
                 };
+                let text = val.to_string();
                 if pos % self.cols == 0 {
-                    acc + "\n" + &text
+                    acc + "\n\r" + &text
                 } else {
                     acc + " " + &text
                 }
@@ -70,9 +132,21 @@ impl Board {
     }
 
     fn down(&mut self) {
-        self.board[self.cols * self.block.0 + self.block.1] = 0;
-        self.block.0 += 1;
-        self.board[self.cols * self.block.0 + self.block.1] = 1;
+        self.board[self.cols * self.block.y + self.block.x] = 0;
+        self.block.down();
+        self.board[self.cols * self.block.y + self.block.x] = 1;
+    }
+
+    fn left(&mut self) {
+        self.board[self.cols * self.block.y + self.block.x] = 0;
+        self.block.left();
+        self.board[self.cols * self.block.y + self.block.x] = 1;
+    }
+
+    fn right(&mut self) {
+        self.board[self.cols * self.block.y + self.block.x] = 0;
+        self.block.right();
+        self.board[self.cols * self.block.y + self.block.x] = 1;
     }
 
     fn new(cols: usize, rows: usize) -> Board {
@@ -80,14 +154,14 @@ impl Board {
             cols,
             rows,
             board: vec![0; cols * rows],
-            block: (0, 0),
+            block: Block::new(0, 0),
         }
     }
 
     fn start(&mut self) {
         hide_cursor();
         clear_screen();
-        self.block = (0, 4);
+        self.block = Block { x: 3, y: 0 };
         println!("{}", self);
     }
 
