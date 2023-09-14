@@ -27,7 +27,7 @@ async fn print_events() {
     let mut board = Board::new(10, 10);
     board.start();
     let mut reader = EventStream::new();
-    let mut limit = 10;
+    let mut limit = 12;
 
     loop {
         let mut delay = Delay::new(Duration::from_millis(1_000)).fuse();
@@ -40,24 +40,20 @@ async fn print_events() {
                     break;
                 }
                 board.down();
-                board.draw();
             },
             maybe_event = event => {
                 match maybe_event {
                     Some(Ok(event)) => {
                         if event == Event::Key(KeyCode::Char('a').into()) {
                             board.left();
-                            board.draw();
                         }
 
                         if event == Event::Key(KeyCode::Char('d').into()) {
                             board.right();
-                            board.draw();
                         }
 
                         if event == Event::Key(KeyCode::Char('s').into()) {
                             board.down();
-                            board.draw();
                         }
 
                         if event == Event::Key(KeyCode::Esc.into()) {
@@ -97,6 +93,7 @@ async fn main() -> std::io::Result<()> {
     Ok(())
 }
 
+#[derive(Clone)]
 struct Block {
     x: usize,
     y: usize,
@@ -112,7 +109,9 @@ impl Block {
     }
 
     fn left(&mut self) {
-        self.x -= 1;
+        if self.x > 0 {
+            self.x -= 1;
+        }
     }
 
     fn right(&mut self) {
@@ -152,28 +151,52 @@ impl Display for Board {
 }
 
 impl Board {
-    fn add_block(&mut self, row: usize, col: usize) {
-        self.board[self.cols * row + col] = 1;
-    }
-
-    fn down(&mut self) {
-        self.block.down();
-    }
-
-    fn left(&mut self) {
-        self.block.left();
-    }
-
-    fn right(&mut self) {
-        self.block.right();
-    }
-
     fn new(cols: usize, rows: usize) -> Board {
         Board {
             cols,
             rows,
             board: vec![0; cols * rows],
             block: Block::new(0, 0),
+        }
+    }
+
+    fn add_block(&mut self, row: usize, col: usize) {
+        self.board[self.cols * row + col] = 1;
+    }
+
+    fn down(&mut self) -> Result<(), Error> {
+        let mut block = self.block.clone();
+        block.down();
+        if self.is_collision(block) {
+            Err(Error::Collision)
+        } else {
+            self.block.down();
+            self.draw();
+            Ok(())
+        }
+    }
+
+    fn left(&mut self) -> Result<(), Error> {
+        let mut block = self.block.clone();
+        block.left();
+        if self.is_collision(block) {
+            Err(Error::Collision)
+        } else {
+            self.block.left();
+            self.draw();
+            Ok(())
+        }
+    }
+
+    fn right(&mut self) -> Result<(), Error> {
+        let mut block = self.block.clone();
+        block.right();
+        if self.is_collision(block) {
+            Err(Error::Collision)
+        } else {
+            self.block.right();
+            self.draw();
+            Ok(())
         }
     }
 
@@ -190,6 +213,17 @@ impl Board {
         execute!(stdout(), Clear(ClearType::All), cursor::MoveTo(0, 0)).unwrap();
         println!("{}", self);
     }
+
+    fn is_collision(&self, block: Block) -> bool {
+        if block.x >= self.cols || block.y >= self.rows {
+            return true;
+        }
+        self.board[self.cols * block.y + block.x] != 0
+    }
+}
+
+enum Error {
+    Collision,
 }
 
 fn hide_cursor() {
