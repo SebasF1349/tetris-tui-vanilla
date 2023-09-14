@@ -1,14 +1,27 @@
-use std::{fmt, fmt::Display, io::stdout, time::Duration};
+use std::{
+    fmt,
+    fmt::Display,
+    io::{stdout, Write},
+    time::Duration,
+};
 
 use futures::{future::FutureExt, select, StreamExt};
 use futures_timer::Delay;
 
 use crossterm::{
-    cursor::position,
+    cursor,
     event::{DisableMouseCapture, EnableMouseCapture, Event, EventStream, KeyCode},
-    execute,
-    terminal::{disable_raw_mode, enable_raw_mode},
+    execute, style,
+    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
 };
+
+struct CleanUp;
+
+impl Drop for CleanUp {
+    fn drop(&mut self) {
+        disable_raw_mode().expect("Unable to disable raw mode")
+    }
+}
 
 async fn print_events() {
     let mut board = Board::new(10, 10);
@@ -32,8 +45,6 @@ async fn print_events() {
             maybe_event = event => {
                 match maybe_event {
                     Some(Ok(event)) => {
-                        println!("Event::{:?}\r", event);
-
                         if event == Event::Key(KeyCode::Char('a').into()) {
                             board.left();
                             board.draw();
@@ -63,19 +74,27 @@ async fn print_events() {
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
+    let _clean_up = CleanUp;
     enable_raw_mode()?;
 
     let mut stdout = stdout();
-    execute!(stdout, EnableMouseCapture)?;
+    execute!(
+        stdout,
+        cursor::Hide,
+        Clear(ClearType::All),
+        cursor::MoveTo(0, 0)
+    )?;
 
     print_events().await;
 
-    execute!(stdout, DisableMouseCapture)?;
-
-    clear_screen();
-    show_cursor();
-
-    disable_raw_mode()
+    execute!(
+        stdout,
+        style::ResetColor,
+        cursor::Show,
+        Clear(ClearType::All),
+        cursor::MoveTo(0, 0)
+    )?;
+    Ok(())
 }
 
 struct Block {
@@ -159,18 +178,16 @@ impl Board {
     }
 
     fn start(&mut self) {
-        hide_cursor();
-        clear_screen();
         self.block = Block { x: 3, y: 0 };
         println!("{}", self);
     }
 
     fn end(&self) {
-        show_cursor();
+        //show_cursor();
     }
 
     fn draw(&self) {
-        clear_screen();
+        execute!(stdout(), Clear(ClearType::All), cursor::MoveTo(0, 0)).unwrap();
         println!("{}", self);
     }
 }
