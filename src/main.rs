@@ -105,8 +105,9 @@ struct Board {
 
 impl Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let output = self
-            .board
+        let mut printed_board = self.board.clone();
+        printed_board[self.cols * self.block.y + self.block.x] = 1;
+        let output = printed_board
             .iter()
             .enumerate()
             .fold("".to_string(), |acc, (pos, val)| {
@@ -115,7 +116,7 @@ impl Display for Board {
                 } else {
                     val.to_string()
                 };
-                let text = val.to_string();
+                //                let text = val.to_string();
                 if pos % self.cols == 0 {
                     acc + "\n\r" + &text
                 } else {
@@ -132,21 +133,15 @@ impl Board {
     }
 
     fn down(&mut self) {
-        self.board[self.cols * self.block.y + self.block.x] = 0;
         self.block.down();
-        self.board[self.cols * self.block.y + self.block.x] = 1;
     }
 
     fn left(&mut self) {
-        self.board[self.cols * self.block.y + self.block.x] = 0;
         self.block.left();
-        self.board[self.cols * self.block.y + self.block.x] = 1;
     }
 
     fn right(&mut self) {
-        self.board[self.cols * self.block.y + self.block.x] = 0;
         self.block.right();
-        self.board[self.cols * self.block.y + self.block.x] = 1;
     }
 
     fn new(cols: usize, rows: usize) -> Board {
