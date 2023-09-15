@@ -37,21 +37,28 @@ async fn print_events() {
                 if board.block.y == board.rows - 1 {
                     board.add_block(0, 5);
                 }
-                board.down();
+                let collision = board.down();
+                match collision {
+                    Err(Error::Collision) => {
+                        board.add_block(0,5);
+                        board.draw();
+                    },
+                    _ => ()
+                }
             },
             maybe_event = event => {
                 match maybe_event {
                     Some(Ok(event)) => {
                         if event == Event::Key(KeyCode::Char('a').into()) {
-                            board.left();
+                            let _ = board.left();
                         }
 
                         if event == Event::Key(KeyCode::Char('d').into()) {
-                            board.right();
+                            let _ = board.right();
                         }
 
                         if event == Event::Key(KeyCode::Char('s').into()) {
-                            board.down();
+                            let _ = board.down();
                         }
 
                         if event == Event::Key(KeyCode::Esc.into()) {
