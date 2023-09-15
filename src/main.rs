@@ -1,16 +1,11 @@
-use std::{
-    fmt,
-    fmt::Display,
-    io::{stdout, Write},
-    time::Duration,
-};
+use std::{fmt, fmt::Display, io::stdout, time::Duration};
 
 use futures::{future::FutureExt, select, StreamExt};
 use futures_timer::Delay;
 
 use crossterm::{
     cursor,
-    event::{DisableMouseCapture, EnableMouseCapture, Event, EventStream, KeyCode},
+    event::{Event, EventStream, KeyCode},
     execute, style,
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
 };
@@ -38,12 +33,9 @@ async fn print_events() {
                     board.add_block(0, 5);
                 }
                 let collision = board.down();
-                match collision {
-                    Err(Error::Collision) => {
-                        board.add_block(0,5);
-                        board.draw();
-                    },
-                    _ => ()
+                if let Err(_) = collision {
+                    board.add_block(0, 5);
+                    board.draw();
                 }
             },
             maybe_event = event => {
@@ -209,10 +201,6 @@ impl Board {
     fn start(&mut self) {
         self.block = Block { x: 3, y: 0 };
         println!("{}", self);
-    }
-
-    fn end(&self) {
-        //show_cursor();
     }
 
     fn draw(&self) {
