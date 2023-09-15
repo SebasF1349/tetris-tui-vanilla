@@ -27,7 +27,6 @@ async fn print_events() {
     let mut board = Board::new(10, 10);
     board.start();
     let mut reader = EventStream::new();
-    let mut limit = 12;
 
     loop {
         let mut delay = Delay::new(Duration::from_millis(1_000)).fuse();
@@ -35,9 +34,8 @@ async fn print_events() {
 
         select! {
             _ = delay => {
-                limit -= 1;
-                if limit == 0 {
-                    break;
+                if board.block.y == board.rows - 1 {
+                    board.add_block(0, 5);
                 }
                 board.down();
             },
@@ -161,7 +159,8 @@ impl Board {
     }
 
     fn add_block(&mut self, row: usize, col: usize) {
-        self.board[self.cols * row + col] = 1;
+        self.board[self.cols * self.block.y + self.block.x] = 1;
+        self.block = Block::new(col, row);
     }
 
     fn down(&mut self) -> Result<(), Error> {
