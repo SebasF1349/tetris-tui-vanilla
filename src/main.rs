@@ -29,9 +29,6 @@ async fn print_events() {
 
         select! {
             _ = delay => {
-                if board.block.y == board.rows - 1 {
-                    board.add_block(0, 5);
-                }
                 let collision = board.down();
                 if let Err(_) = collision {
                     board.add_block(0, 5);
