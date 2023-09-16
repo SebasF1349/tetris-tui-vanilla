@@ -145,10 +145,6 @@ impl Display for Board {
                 format!("|{}|", ret.join(""))
             })
             .collect();
-        println!(
-            "{}-{}-{}",
-            self.block.row, self.block.col, self.board[self.block.row][self.block.col]
-        );
         write!(f, "{}\n\r {}", output.join("\n\r"), "-".repeat(self.cols))
     }
 }
