@@ -133,14 +133,15 @@ impl Display for Board {
                 } else {
                     val.to_string()
                 };
-                //                let text = val.to_string();
-                if pos % self.cols == 0 {
-                    acc + "\n\r" + &text
+                if pos == 0 {
+                    acc + &text
+                } else if pos % self.cols == 0 {
+                    acc + "|\n\r|" + &text
                 } else {
                     acc + " " + &text
                 }
             });
-        write!(f, "{}", output)
+        write!(f, "|{}|\n\r {}", output, "- ".repeat(self.cols))
     }
 }
 
