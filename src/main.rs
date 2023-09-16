@@ -87,61 +87,69 @@ async fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct Block {
-    x: usize,
-    y: usize,
+    col: usize,
+    row: usize,
 }
 
 impl Block {
-    fn new(x: usize, y: usize) -> Block {
-        Block { x, y }
+    fn new(col: usize, row: usize) -> Block {
+        Block { col, row }
     }
 
     fn down(&mut self) {
-        self.y += 1;
+        self.row += 1;
     }
 
     fn left(&mut self) {
-        if self.x > 0 {
-            self.x -= 1;
+        if self.col > 0 {
+            self.col -= 1;
         }
     }
 
     fn right(&mut self) {
-        self.x += 1;
+        self.col += 1;
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct Board {
     cols: usize,
     rows: usize,
-    board: Vec<i32>,
+    board: Vec<Vec<i32>>,
     block: Block,
 }
 
 impl Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut printed_board = self.board.clone();
-        printed_board[self.cols * self.block.y + self.block.x] = 1;
-        let output = printed_board
-            .iter()
+        let output: Vec<String> = self
+            .board
+            .clone()
+            .iter_mut()
             .enumerate()
-            .fold("".to_string(), |acc, (pos, val)| {
-                let text = if val == &0 {
-                    " ".to_string()
-                } else {
-                    val.to_string()
-                };
-                if pos == 0 {
-                    acc + &text
-                } else if pos % self.cols == 0 {
-                    acc + "|\n\r|" + &text
-                } else {
-                    acc + " " + &text
+            .map(|(pos, val)| {
+                if self.block.row == pos {
+                    val[self.block.col] = 1;
                 }
-            });
-        write!(f, "|{}|\n\r {}", output, "- ".repeat(self.cols))
+                let ret: Vec<String> = val
+                    .iter()
+                    .map(|num| {
+                        if num == &0 {
+                            " ".to_string()
+                        } else {
+                            num.to_string()
+                        }
+                    })
+                    .collect();
+                format!("|{}|", ret.join(""))
+            })
+            .collect();
+        println!(
+            "{}-{}-{}",
+            self.block.row, self.block.col, self.board[self.block.row][self.block.col]
+        );
+        write!(f, "{}\n\r {}", output.join("\n\r"), "-".repeat(self.cols))
     }
 }
 
@@ -150,13 +158,13 @@ impl Board {
         Board {
             cols,
             rows,
-            board: vec![0; cols * rows],
+            board: vec![vec![0; cols]; rows],
             block: Block::new(0, 0),
         }
     }
 
     fn add_block(&mut self, row: usize, col: usize) {
-        self.board[self.cols * self.block.y + self.block.x] = 1;
+        self.board[self.block.row][self.block.col] = 1;
         self.block = Block::new(col, row);
     }
 
@@ -197,7 +205,7 @@ impl Board {
     }
 
     fn start(&mut self) {
-        self.block = Block { x: 3, y: 0 };
+        self.block = Block { col: 3, row: 0 };
         println!("{}", self);
     }
 
@@ -207,10 +215,7 @@ impl Board {
     }
 
     fn is_collision(&self, block: Block) -> bool {
-        if block.x >= self.cols || block.y >= self.rows {
-            return true;
-        }
-        self.board[self.cols * block.y + block.x] != 0
+        block.col >= self.cols || block.row >= self.rows || self.board[block.row][block.col] != 0
     }
 }
 
@@ -232,4 +237,25 @@ fn clear_screen() {
 
 fn move_cursor(row: usize, col: usize) {
     print!("\x1B[{0};{1}H", row, col);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_add_block() {
+        let mut board = Board::new(10, 10);
+        board.add_block(3, 4);
+        assert_eq!(board.block, Block { row: 3, col: 4 });
+        assert_eq!(board.board[0][0], 1);
+    }
+
+    #[test]
+    fn test_collision() {
+        let mut board = Board::new(10, 10);
+        board.board[2][3] = 1;
+        let block = Block { row: 2, col: 3 };
+        assert!(board.is_collision(block));
+    }
 }
