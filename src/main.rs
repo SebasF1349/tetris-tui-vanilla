@@ -19,8 +19,8 @@ impl Drop for CleanUp {
 }
 
 async fn print_events() {
-    let mut board = Board::new(10, 10);
-    board.start();
+    let mut tetris = Tetris::new(10, 10);
+    tetris.start();
     let mut reader = EventStream::new();
 
     loop {
@@ -29,25 +29,25 @@ async fn print_events() {
 
         select! {
             _ = delay => {
-                let collision = board.down();
+                let collision = tetris.block_down();
                 if let Err(_) = collision {
-                    board.add_block(0, 5);
-                    board.draw();
+                    tetris.add_block(0, 5);
+                    tetris.draw();
                 }
             },
             maybe_event = event => {
                 match maybe_event {
                     Some(Ok(event)) => {
                         if event == Event::Key(KeyCode::Char('a').into()) {
-                            let _ = board.left();
+                            let _ = tetris.block_left();
                         }
 
                         if event == Event::Key(KeyCode::Char('d').into()) {
-                            let _ = board.right();
+                            let _ = tetris.block_right();
                         }
 
                         if event == Event::Key(KeyCode::Char('s').into()) {
-                            let _ = board.down();
+                            let _ = tetris.block_down();
                         }
 
                         if event == Event::Key(KeyCode::Esc.into()) {
@@ -114,14 +114,14 @@ impl Block {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct Board {
+struct Tetris {
     cols: usize,
     rows: usize,
     board: Vec<Vec<i32>>,
     block: Block,
 }
 
-impl Display for Board {
+impl Display for Tetris {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let output: Vec<String> = self
             .board
@@ -149,9 +149,9 @@ impl Display for Board {
     }
 }
 
-impl Board {
-    fn new(cols: usize, rows: usize) -> Board {
-        Board {
+impl Tetris {
+    fn new(cols: usize, rows: usize) -> Tetris {
+        Tetris {
             cols,
             rows,
             board: vec![vec![0; cols]; rows],
@@ -164,7 +164,7 @@ impl Board {
         self.block = Block::new(col, row);
     }
 
-    fn down(&mut self) -> Result<(), Error> {
+    fn block_down(&mut self) -> Result<(), Error> {
         let mut block = self.block.clone();
         block.down();
         if self.is_collision(block) {
@@ -176,7 +176,7 @@ impl Board {
         }
     }
 
-    fn left(&mut self) -> Result<(), Error> {
+    fn block_left(&mut self) -> Result<(), Error> {
         let mut block = self.block.clone();
         block.left();
         if self.is_collision(block) {
@@ -188,7 +188,7 @@ impl Board {
         }
     }
 
-    fn right(&mut self) -> Result<(), Error> {
+    fn block_right(&mut self) -> Result<(), Error> {
         let mut block = self.block.clone();
         block.right();
         if self.is_collision(block) {
@@ -241,17 +241,17 @@ mod tests {
 
     #[test]
     fn test_add_block() {
-        let mut board = Board::new(10, 10);
-        board.add_block(3, 4);
-        assert_eq!(board.block, Block { row: 3, col: 4 });
-        assert_eq!(board.board[0][0], 1);
+        let mut tetris = Tetris::new(10, 10);
+        tetris.add_block(3, 4);
+        assert_eq!(tetris.block, Block { row: 3, col: 4 });
+        assert_eq!(tetris.board[0][0], 1);
     }
 
     #[test]
     fn test_collision() {
-        let mut board = Board::new(10, 10);
-        board.board[2][3] = 1;
+        let mut tetris = Tetris::new(10, 10);
+        tetris.board[2][3] = 1;
         let block = Block { row: 2, col: 3 };
-        assert!(board.is_collision(block));
+        assert!(tetris.is_collision(block));
     }
 }
