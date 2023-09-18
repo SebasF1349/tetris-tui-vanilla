@@ -114,34 +114,45 @@ impl Block {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+enum Square {
+    Empty,
+    Occupied,
+}
+
+/*impl Display for Square {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Square::Empty => write!(f, " "),
+            Square::Occupied => write!(f, "█"),
+        }
+    }
+}*/
+
+impl ToString for Square {
+    fn to_string(&self) -> String {
+        match self {
+            Square::Empty => String::from(" "),
+            Square::Occupied => String::from("█"),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct Tetris {
     cols: usize,
     rows: usize,
-    board: Vec<Vec<i32>>,
+    board: Vec<Vec<Square>>,
     block: Block,
 }
 
 impl Display for Tetris {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let output: Vec<String> = self
-            .board
-            .clone()
+        let mut output = self.board.clone();
+        output[self.block.row][self.block.col] = Square::Occupied;
+        let output: Vec<String> = output
             .iter_mut()
-            .enumerate()
-            .map(|(pos, val)| {
-                if self.block.row == pos {
-                    val[self.block.col] = 1;
-                }
-                let ret: Vec<String> = val
-                    .iter()
-                    .map(|num| {
-                        if num == &0 {
-                            " ".to_string()
-                        } else {
-                            num.to_string()
-                        }
-                    })
-                    .collect();
+            .map(|val| {
+                let ret: Vec<String> = val.iter().map(|num| num.to_string()).collect();
                 format!("|{}|", ret.join(""))
             })
             .collect();
@@ -154,13 +165,13 @@ impl Tetris {
         Tetris {
             cols,
             rows,
-            board: vec![vec![0; cols]; rows],
+            board: vec![vec![Square::Empty; cols]; rows],
             block: Block::new(0, 0),
         }
     }
 
     fn add_block(&mut self, row: usize, col: usize) {
-        self.board[self.block.row][self.block.col] = 1;
+        self.board[self.block.row][self.block.col] = Square::Occupied;
         self.block = Block::new(col, row);
     }
 
@@ -211,7 +222,9 @@ impl Tetris {
     }
 
     fn is_collision(&self, block: Block) -> bool {
-        block.col >= self.cols || block.row >= self.rows || self.board[block.row][block.col] != 0
+        block.col >= self.cols
+            || block.row >= self.rows
+            || self.board[block.row][block.col] == Square::Occupied
     }
 }
 
@@ -244,13 +257,13 @@ mod tests {
         let mut tetris = Tetris::new(10, 10);
         tetris.add_block(3, 4);
         assert_eq!(tetris.block, Block { row: 3, col: 4 });
-        assert_eq!(tetris.board[0][0], 1);
+        assert_eq!(tetris.board[0][0], Square::Occupied);
     }
 
     #[test]
     fn test_collision() {
         let mut tetris = Tetris::new(10, 10);
-        tetris.board[2][3] = 1;
+        tetris.board[2][3] = Square::Occupied;
         let block = Block { row: 2, col: 3 };
         assert!(tetris.is_collision(block));
     }
