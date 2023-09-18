@@ -1,12 +1,7 @@
-use std::{fmt, fmt::Display, io::stdout, time::Duration};
-
-use futures::{future::FutureExt, select, StreamExt};
-use futures_timer::Delay;
+use std::{fmt, fmt::Display, io::stdout, sync::mpsc, thread, time::Duration};
 
 use crossterm::{
-    cursor,
-    event::{Event, EventStream, KeyCode},
-    execute, style,
+    cursor, execute, style,
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
 };
 
@@ -18,52 +13,7 @@ impl Drop for CleanUp {
     }
 }
 
-async fn print_events() {
-    let mut tetris = Tetris::new(10, 10);
-    tetris.start();
-    let mut reader = EventStream::new();
-
-    loop {
-        let mut delay = Delay::new(Duration::from_millis(1_000)).fuse();
-        let mut event = reader.next().fuse();
-
-        select! {
-            _ = delay => {
-                let collision = tetris.block_down();
-                if let Err(_) = collision {
-                    tetris.add_block(0, 5);
-                    tetris.draw();
-                }
-            },
-            maybe_event = event => {
-                match maybe_event {
-                    Some(Ok(event)) => {
-                        if event == Event::Key(KeyCode::Char('a').into()) {
-                            let _ = tetris.block_left();
-                        }
-
-                        if event == Event::Key(KeyCode::Char('d').into()) {
-                            let _ = tetris.block_right();
-                        }
-
-                        if event == Event::Key(KeyCode::Char('s').into()) {
-                            let _ = tetris.block_down();
-                        }
-
-                        if event == Event::Key(KeyCode::Esc.into()) {
-                            break;
-                        }
-                    }
-                    Some(Err(e)) => println!("Error: {:?}\r", e),
-                    None => break,
-                }
-            }
-        };
-    }
-}
-
-#[tokio::main]
-async fn main() -> std::io::Result<()> {
+fn main() -> std::io::Result<()> {
     let _clean_up = CleanUp;
     enable_raw_mode()?;
 
@@ -75,7 +25,8 @@ async fn main() -> std::io::Result<()> {
         cursor::MoveTo(0, 0)
     )?;
 
-    print_events().await;
+    let mut tetris = Tetris::new(10, 10);
+    tetris.play();
 
     execute!(
         stdout,
@@ -119,15 +70,6 @@ enum Square {
     Occupied,
 }
 
-/*impl Display for Square {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Square::Empty => write!(f, " "),
-            Square::Occupied => write!(f, "█"),
-        }
-    }
-}*/
-
 impl ToString for Square {
     fn to_string(&self) -> String {
         match self {
@@ -135,6 +77,20 @@ impl ToString for Square {
             Square::Occupied => String::from("█"),
         }
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum GameEvents {
+    TICK,
+    KEY(Key),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum Key {
+    DOWN,
+    LEFT,
+    RIGHT,
+    CHAR(char),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -170,44 +126,114 @@ impl Tetris {
         }
     }
 
+    fn play(&mut self) {
+        let (tx, rx) = mpsc::channel();
+        self.start();
+
+        {
+            let tx = tx.clone();
+            thread::spawn(move || loop {
+                thread::sleep(Duration::from_millis(1000));
+                tx.send(GameEvents::TICK).unwrap();
+            });
+        }
+
+        {
+            let tx = tx.clone();
+            thread::spawn(move || loop {
+                loop {
+                    let stdin = &mut std::io::stdin();
+
+                    loop {
+                        match get_input(stdin) {
+                            Some(k) => tx.send(GameEvents::KEY(k)).unwrap(),
+                            None => (),
+                        }
+                    }
+                }
+            });
+        }
+
+        loop {
+            match rx.recv() {
+                Ok(update) => {
+                    match update {
+                        GameEvents::KEY(key) => {
+                            match key {
+                                Key::CHAR('q') => break,
+                                k => {
+                                    self.keypress(k);
+                                }
+                            };
+                        }
+                        GameEvents::TICK => {
+                            self.tick();
+                        }
+                    };
+                }
+                Err(err) => panic!("{}", err),
+            }
+        }
+    }
+
+    fn keypress(&mut self, key: Key) {
+        if key == Key::LEFT {
+            self.block_left();
+        }
+
+        if key == Key::RIGHT {
+            self.block_right();
+        }
+
+        if key == Key::DOWN {
+            self.block_down();
+        }
+
+        /* if key == Event::Key(KeyCode::Esc.into()) {
+            break;
+        } */
+    }
+
     fn add_block(&mut self, row: usize, col: usize) {
         self.board[self.block.row][self.block.col] = Square::Occupied;
         self.block = Block::new(col, row);
     }
 
-    fn block_down(&mut self) -> Result<(), Error> {
+    fn tick(&mut self) {
         let mut block = self.block.clone();
         block.down();
         if self.is_collision(block) {
-            Err(Error::Collision)
+            self.add_block(0, 5);
         } else {
             self.block.down();
+        }
+        self.draw();
+    }
+
+    fn block_down(&mut self) {
+        let mut block = self.block.clone();
+        block.down();
+        if !self.is_collision(block) {
+            self.block.down();
             self.draw();
-            Ok(())
         }
     }
 
-    fn block_left(&mut self) -> Result<(), Error> {
+    fn block_left(&mut self) {
         let mut block = self.block.clone();
         block.left();
-        if self.is_collision(block) {
-            Err(Error::Collision)
-        } else {
+        if !self.is_collision(block) {
             self.block.left();
             self.draw();
-            Ok(())
         }
     }
 
-    fn block_right(&mut self) -> Result<(), Error> {
+    fn block_right(&mut self) {
         let mut block = self.block.clone();
         block.right();
-        if self.is_collision(block) {
-            Err(Error::Collision)
-        } else {
+        if !self.is_collision(block) {
             self.block.right();
             self.draw();
-            Ok(())
         }
     }
 
@@ -228,8 +254,39 @@ impl Tetris {
     }
 }
 
-enum Error {
-    Collision,
+fn get_input(stdin: &mut std::io::Stdin) -> Option<Key> {
+    use std::io::Read;
+
+    let c = &mut [0u8];
+    match stdin.read(c) {
+        Ok(_) => {
+            match std::str::from_utf8(c) {
+                Ok("s") => Some(Key::DOWN),
+                Ok("a") => Some(Key::LEFT),
+                Ok("d") => Some(Key::RIGHT),
+                Ok("\x1b") => {
+                    let code = &mut [0u8; 2];
+                    match stdin.read(code) {
+                        Ok(_) => {
+                            match std::str::from_utf8(code) {
+                                //Ok("[A") => Some(Key::Up),
+                                Ok("[B") => Some(Key::DOWN),
+                                Ok("[D") => Some(Key::LEFT),
+                                Ok("[C") => Some(Key::RIGHT),
+                                _ => None,
+                            }
+                        }
+                        Err(msg) => {
+                            panic!("{}", format!("could not read from standard in: {}", msg))
+                        }
+                    }
+                }
+                Ok(n) => Some(Key::CHAR(n.chars().next().unwrap())),
+                _ => None,
+            }
+        }
+        Err(msg) => panic!("{}", format!("could not read from standard in: {}", msg)),
+    }
 }
 
 fn hide_cursor() {
