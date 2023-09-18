@@ -4,6 +4,7 @@ use crossterm::{
     cursor, execute, style,
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
 };
+use rand::{distributions::Standard, prelude::Distribution};
 
 struct CleanUp;
 
@@ -42,11 +43,13 @@ fn main() -> std::io::Result<()> {
 struct Block {
     col: usize,
     row: usize,
+    color: Color,
 }
 
 impl Block {
     fn new(col: usize, row: usize) -> Block {
-        Block { col, row }
+        let color: Color = rand::random();
+        Block { col, row, color }
     }
 
     fn down(&mut self) {
@@ -64,17 +67,48 @@ impl Block {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+enum Color {
+    RED,
+    BLUE,
+    ORANGE,
+    YELLOW,
+    GREEN,
+    VIOLET,
+    BROWN,
+}
+
+impl Distribution<Color> for Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Color {
+        match rng.gen_range(0..=6) {
+            0 => Color::RED,
+            1 => Color::BLUE,
+            2 => Color::ORANGE,
+            3 => Color::YELLOW,
+            4 => Color::GREEN,
+            5 => Color::VIOLET,
+            _ => Color::BROWN,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum Square {
-    Empty,
-    Occupied,
+    EMPTY,
+    OCCUPIED(Color),
 }
 
 impl ToString for Square {
     fn to_string(&self) -> String {
         match self {
-            Square::Empty => String::from(" "),
-            Square::Occupied => String::from("█"),
+            Square::EMPTY => String::from("  "),
+            Square::OCCUPIED(Color::RED) => String::from('\u{1F7E5}'),
+            Square::OCCUPIED(Color::BLUE) => String::from('\u{1F7E6}'),
+            Square::OCCUPIED(Color::ORANGE) => String::from('\u{1F7E7}'),
+            Square::OCCUPIED(Color::YELLOW) => String::from('\u{1F7E8}'),
+            Square::OCCUPIED(Color::GREEN) => String::from('\u{1F7E9}'),
+            Square::OCCUPIED(Color::VIOLET) => String::from('\u{1F7EA}'),
+            Square::OCCUPIED(Color::BROWN) => String::from('\u{1F7EB}'),
         }
     }
 }
@@ -104,7 +138,7 @@ struct Tetris {
 impl Display for Tetris {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut output = self.board.clone();
-        output[self.block.row][self.block.col] = Square::Occupied;
+        output[self.block.row][self.block.col] = Square::OCCUPIED(self.block.color);
         let output: Vec<String> = output
             .iter_mut()
             .map(|val| {
@@ -112,7 +146,12 @@ impl Display for Tetris {
                 format!("|{}|", ret.join(""))
             })
             .collect();
-        write!(f, "{}\n\r {}", output.join("\n\r"), "-".repeat(self.cols))
+        write!(
+            f,
+            "{}\n\r {}",
+            output.join("\n\r"),
+            "-".repeat(self.cols * 2)
+        )
     }
 }
 
@@ -121,7 +160,7 @@ impl Tetris {
         Tetris {
             cols,
             rows,
-            board: vec![vec![Square::Empty; cols]; rows],
+            board: vec![vec![Square::EMPTY; cols]; rows],
             block: Block::new(0, 0),
         }
     }
@@ -195,7 +234,7 @@ impl Tetris {
     }
 
     fn add_block(&mut self, row: usize, col: usize) {
-        self.board[self.block.row][self.block.col] = Square::Occupied;
+        self.board[self.block.row][self.block.col] = Square::OCCUPIED(self.block.color);
         self.block = Block::new(col, row);
     }
 
@@ -238,7 +277,7 @@ impl Tetris {
     }
 
     fn start(&mut self) {
-        self.block = Block { col: 3, row: 0 };
+        self.block = Block::new(5, 0);
         println!("{}", self);
     }
 
@@ -247,10 +286,15 @@ impl Tetris {
         println!("{}", self);
     }
 
+    fn is_occupied(&self, row: usize, col: usize) -> bool {
+        match self.board[row][col] {
+            Square::OCCUPIED(_) => true,
+            Square::EMPTY => false,
+        }
+    }
+
     fn is_collision(&self, block: Block) -> bool {
-        block.col >= self.cols
-            || block.row >= self.rows
-            || self.board[block.row][block.col] == Square::Occupied
+        block.col >= self.cols || block.row >= self.rows || self.is_occupied(block.row, block.col)
     }
 }
 
@@ -313,15 +357,19 @@ mod tests {
     fn test_add_block() {
         let mut tetris = Tetris::new(10, 10);
         tetris.add_block(3, 4);
-        assert_eq!(tetris.block, Block { row: 3, col: 4 });
-        assert_eq!(tetris.board[0][0], Square::Occupied);
+        assert_eq!(tetris.block, Block::new(3, 4));
+        assert_eq!(tetris.board[0][0], Square::OCCUPIED(tetris.block.color));
     }
 
     #[test]
     fn test_collision() {
         let mut tetris = Tetris::new(10, 10);
-        tetris.board[2][3] = Square::Occupied;
-        let block = Block { row: 2, col: 3 };
+        tetris.board[2][3] = Square::OCCUPIED(tetris.block.color);
+        let block = Block {
+            row: 2,
+            col: 3,
+            color: tetris.block.color,
+        };
         assert!(tetris.is_collision(block));
     }
 }
