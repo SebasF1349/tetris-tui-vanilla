@@ -116,15 +116,16 @@ impl ToString for Square {
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum GameEvents {
     TICK,
-    KEY(Key),
+    KEY(KeyEvents),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum Key {
+enum KeyEvents {
     DOWN,
     LEFT,
     RIGHT,
-    CHAR(char),
+    ROTATE,
+    QUIT,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -199,10 +200,11 @@ impl Tetris {
                     match update {
                         GameEvents::KEY(key) => {
                             match key {
-                                Key::CHAR('q') => break,
-                                k => {
-                                    self.keypress(k);
-                                }
+                                KeyEvents::QUIT => break,
+                                KeyEvents::LEFT => self.block_left(),
+                                KeyEvents::RIGHT => self.block_right(),
+                                KeyEvents::DOWN => self.block_down(),
+                                KeyEvents::ROTATE => (),
                             };
                         }
                         GameEvents::TICK => {
@@ -213,24 +215,6 @@ impl Tetris {
                 Err(err) => panic!("{}", err),
             }
         }
-    }
-
-    fn keypress(&mut self, key: Key) {
-        if key == Key::LEFT {
-            self.block_left();
-        }
-
-        if key == Key::RIGHT {
-            self.block_right();
-        }
-
-        if key == Key::DOWN {
-            self.block_down();
-        }
-
-        /* if key == Event::Key(KeyCode::Esc.into()) {
-            break;
-        } */
     }
 
     fn add_block(&mut self, row: usize, col: usize) {
@@ -298,37 +282,34 @@ impl Tetris {
     }
 }
 
-fn get_input(stdin: &mut std::io::Stdin) -> Option<Key> {
+fn get_input(stdin: &mut std::io::Stdin) -> Option<KeyEvents> {
     use std::io::Read;
 
     let c = &mut [0u8];
     match stdin.read(c) {
-        Ok(_) => {
-            match std::str::from_utf8(c) {
-                Ok("s") => Some(Key::DOWN),
-                Ok("a") => Some(Key::LEFT),
-                Ok("d") => Some(Key::RIGHT),
-                Ok("\x1b") => {
-                    let code = &mut [0u8; 2];
-                    match stdin.read(code) {
-                        Ok(_) => {
-                            match std::str::from_utf8(code) {
-                                //Ok("[A") => Some(Key::Up),
-                                Ok("[B") => Some(Key::DOWN),
-                                Ok("[D") => Some(Key::LEFT),
-                                Ok("[C") => Some(Key::RIGHT),
-                                _ => None,
-                            }
-                        }
-                        Err(msg) => {
-                            panic!("{}", format!("could not read from standard in: {}", msg))
-                        }
+        Ok(_) => match std::str::from_utf8(c) {
+            Ok("w") => Some(KeyEvents::ROTATE),
+            Ok("s") => Some(KeyEvents::DOWN),
+            Ok("a") => Some(KeyEvents::LEFT),
+            Ok("d") => Some(KeyEvents::RIGHT),
+            Ok("q") => Some(KeyEvents::QUIT),
+            Ok("\x1b") => {
+                let code = &mut [0u8; 2];
+                match stdin.read(code) {
+                    Ok(_) => match std::str::from_utf8(code) {
+                        Ok("[A") => Some(KeyEvents::ROTATE),
+                        Ok("[B") => Some(KeyEvents::DOWN),
+                        Ok("[D") => Some(KeyEvents::LEFT),
+                        Ok("[C") => Some(KeyEvents::RIGHT),
+                        _ => None,
+                    },
+                    Err(msg) => {
+                        panic!("{}", format!("could not read from standard in: {}", msg))
                     }
                 }
-                Ok(n) => Some(Key::CHAR(n.chars().next().unwrap())),
-                _ => None,
             }
-        }
+            _ => None,
+        },
         Err(msg) => panic!("{}", format!("could not read from standard in: {}", msg)),
     }
 }
