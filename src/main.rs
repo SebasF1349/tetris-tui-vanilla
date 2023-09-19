@@ -143,14 +143,14 @@ impl Display for Tetris {
             .iter_mut()
             .map(|val| {
                 let ret: Vec<String> = val.iter().map(|num| num.to_string()).collect();
-                format!("|{}|", ret.join(""))
+                format!("\u{2590}{}\u{258C}", ret.join(""))
             })
             .collect();
         write!(
             f,
-            "{}\n\r {}",
+            "{}\n\r{}",
             output.join("\n\r"),
-            "-".repeat(self.cols * 2)
+            "\u{2594}".repeat(self.cols * 2 + 2)
         )
     }
 }
