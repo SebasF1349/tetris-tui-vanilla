@@ -4,7 +4,7 @@ use crossterm::{
     cursor, execute, style,
     terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType},
 };
-use rand::{distributions::Standard, prelude::Distribution};
+use rand::{distributions::Standard, prelude::Distribution, Rng};
 
 struct CleanUp;
 
@@ -26,7 +26,7 @@ fn main() -> std::io::Result<()> {
         cursor::MoveTo(0, 0)
     )?;
 
-    let mut tetris = Tetris::new(10, 10);
+    let mut tetris = Tetris::new(20, 23);
     tetris.play();
 
     execute!(
@@ -41,29 +41,156 @@ fn main() -> std::io::Result<()> {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Block {
-    col: usize,
-    row: usize,
+    piece: [[usize; 2]; 4],
     color: Color,
 }
 
 impl Block {
-    fn new(col: usize, row: usize) -> Block {
+    fn new() -> Block {
         let color: Color = rand::random();
-        Block { col, row, color }
+        let piece = get_piece(10, 4);
+        Block { piece, color }
     }
 
     fn down(&mut self) {
-        self.row += 1;
+        self.piece = self.piece.map(|sq| [sq[0] + 1, sq[1]]);
     }
 
     fn left(&mut self) {
-        if self.col > 0 {
-            self.col -= 1;
+        if self.piece.into_iter().all(|sq| sq[1] > 0) {
+            self.piece = self.piece.map(|sq| [sq[0], sq[1] - 1]);
         }
     }
 
     fn right(&mut self) {
-        self.col += 1;
+        self.piece = self.piece.map(|sq| [sq[0], sq[1] + 1]);
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Copy)]
+enum Piece {
+    I,
+    J,
+    L,
+    O,
+    S,
+    T,
+    Z,
+}
+
+impl Distribution<Piece> for Standard {
+    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Piece {
+        match rng.gen_range(0..=6) {
+            0 => Piece::I,
+            1 => Piece::J,
+            2 => Piece::L,
+            3 => Piece::O,
+            4 => Piece::S,
+            5 => Piece::T,
+            _ => Piece::Z,
+        }
+    }
+}
+
+fn get_piece(col: usize, row: usize) -> [[usize; 2]; 4] {
+    let piece: Piece = rand::random();
+    let mut rng = rand::thread_rng();
+    let pos = rng.gen_range(0..4);
+    match (piece, pos) {
+        (Piece::I, p) if p < 2 => [[row, col], [row, col + 1], [row, col + 2], [row, col + 3]],
+        (Piece::I, _) => [[row, col], [row - 1, col], [row - 2, col], [row - 3, col]],
+        (Piece::J, 0) => [
+            [row, col],
+            [row - 1, col],
+            [row - 1, col - 1],
+            [row - 1, col - 2],
+        ],
+        (Piece::J, 1) => [
+            [row, col],
+            [row, col + 1],
+            [row - 1, col + 1],
+            [row - 2, col + 1],
+        ],
+        (Piece::J, 2) => [[row, col], [row, col + 1], [row, col + 2], [row - 1, col]],
+        (Piece::J, _) => [
+            [row, col],
+            [row - 1, col],
+            [row - 2, col],
+            [row - 2, col + 1],
+        ],
+        (Piece::L, 0) => [
+            [row, col],
+            [row - 1, col],
+            [row - 1, col + 1],
+            [row - 1, col + 2],
+        ],
+        (Piece::L, 1) => [
+            [row, col],
+            [row + 1, col],
+            [row + 2, col],
+            [row + 2, col - 1],
+        ],
+        (Piece::L, 2) => [
+            [row, col],
+            [row, col + 1],
+            [row, col + 2],
+            [row - 1, col + 2],
+        ],
+        (Piece::L, _) => [[row, col], [row - 1, col], [row - 2, col], [row, col + 1]],
+        (Piece::T, 0) => [
+            [row, col],
+            [row - 1, col],
+            [row - 1, col + 1],
+            [row - 1, col - 2],
+        ],
+        (Piece::T, 1) => [
+            [row, col],
+            [row + 1, col],
+            [row + 2, col],
+            [row + 1, col - 1],
+        ],
+        (Piece::T, 2) => [
+            [row, col],
+            [row, col + 1],
+            [row, col + 2],
+            [row - 1, col + 1],
+        ],
+        (Piece::T, _) => [
+            [row, col],
+            [row - 1, col],
+            [row - 2, col],
+            [row - 1, col + 1],
+        ],
+        (Piece::S, p) if p < 2 => [
+            [row, col],
+            [row, col + 1],
+            [row - 1, col + 1],
+            [row, col + 2],
+        ],
+        (Piece::S, _) => [
+            [row, col],
+            [row - 1, col],
+            [row - 1, col - 1],
+            [row - 2, col - 1],
+        ],
+        (Piece::Z, p) if p < 2 => [
+            [row, col],
+            [row, col - 1],
+            [row - 1, col - 1],
+            [row - 1, col - 2],
+        ],
+        (Piece::Z, _) => [
+            [row, col],
+            [row - 1, col],
+            [row - 1, col + 1],
+            [row - 2, col + 1],
+        ],
+        (Piece::O, _) => [
+            [row, col],
+            [row, col + 1],
+            [row - 1, col],
+            [row - 2, col + 1],
+        ],
     }
 }
 
@@ -139,9 +266,13 @@ struct Tetris {
 impl Display for Tetris {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut output = self.board.clone();
-        output[self.block.row][self.block.col] = Square::OCCUPIED(self.block.color);
+        for i in 0..4 {
+            output[self.block.piece[i][0]][self.block.piece[i][1]] =
+                Square::OCCUPIED(self.block.color);
+        }
         let output: Vec<String> = output
             .iter_mut()
+            .skip(4)
             .map(|val| {
                 let ret: Vec<String> = val.iter().map(|num| num.to_string()).collect();
                 format!("\u{2590}{}\u{258C}", ret.join(""))
@@ -162,7 +293,7 @@ impl Tetris {
             cols,
             rows,
             board: vec![vec![Square::EMPTY; cols]; rows],
-            block: Block::new(0, 0),
+            block: Block::new(),
         }
     }
 
@@ -218,8 +349,11 @@ impl Tetris {
     }
 
     fn add_block(&mut self, row: usize, col: usize) {
-        self.board[self.block.row][self.block.col] = Square::OCCUPIED(self.block.color);
-        self.block = Block::new(col, row);
+        for i in 0..4 {
+            self.board[self.block.piece[i][0]][self.block.piece[i][1]] =
+                Square::OCCUPIED(self.block.color);
+        }
+        self.block = Block::new();
     }
 
     fn tick(&mut self) {
@@ -261,7 +395,7 @@ impl Tetris {
     }
 
     fn start(&mut self) {
-        self.block = Block::new(5, 0);
+        self.block = Block::new();
         println!("{}", self);
     }
 
@@ -278,7 +412,10 @@ impl Tetris {
     }
 
     fn is_collision(&self, block: Block) -> bool {
-        block.col >= self.cols || block.row >= self.rows || self.is_occupied(block.row, block.col)
+        block
+            .piece
+            .into_iter()
+            .any(|sq| sq[1] >= self.cols || sq[0] >= self.rows || self.is_occupied(sq[0], sq[1]))
     }
 }
 
@@ -330,6 +467,7 @@ fn move_cursor(row: usize, col: usize) {
     print!("\x1B[{0};{1}H", row, col);
 }
 
+// tests are failing after adding pieces
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -338,7 +476,7 @@ mod tests {
     fn test_add_block() {
         let mut tetris = Tetris::new(10, 10);
         tetris.add_block(3, 4);
-        assert_eq!(tetris.block, Block::new(3, 4));
+        assert_eq!(tetris.block, Block::new());
         assert_eq!(tetris.board[0][0], Square::OCCUPIED(tetris.block.color));
     }
 
@@ -346,11 +484,9 @@ mod tests {
     fn test_collision() {
         let mut tetris = Tetris::new(10, 10);
         tetris.board[2][3] = Square::OCCUPIED(tetris.block.color);
-        let block = Block {
-            row: 2,
-            col: 3,
-            color: tetris.block.color,
-        };
+        let color: Color = rand::random();
+        let piece = get_piece(2, 3);
+        let block = Block { color, piece };
         assert!(tetris.is_collision(block));
     }
 }
