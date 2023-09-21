@@ -172,7 +172,7 @@ fn get_piece(piece: Piece, pos: usize, coor: Coordinates) -> [[usize; 2]; 4] {
             [coor.row, coor.col],
             [coor.row - 1, coor.col],
             [coor.row - 1, coor.col + 1],
-            [coor.row - 1, coor.col - 2],
+            [coor.row - 1, coor.col - 1],
         ],
         (Piece::T, 1) => [
             [coor.row, coor.col],
@@ -196,7 +196,7 @@ fn get_piece(piece: Piece, pos: usize, coor: Coordinates) -> [[usize; 2]; 4] {
             [coor.row, coor.col],
             [coor.row, coor.col + 1],
             [coor.row - 1, coor.col + 1],
-            [coor.row, coor.col + 2],
+            [coor.row - 1, coor.col + 2],
         ],
         (Piece::S, _) => [
             [coor.row, coor.col],
@@ -220,7 +220,7 @@ fn get_piece(piece: Piece, pos: usize, coor: Coordinates) -> [[usize; 2]; 4] {
             [coor.row, coor.col],
             [coor.row, coor.col + 1],
             [coor.row - 1, coor.col],
-            [coor.row - 2, coor.col + 1],
+            [coor.row - 1, coor.col + 1],
         ],
     }
 }
