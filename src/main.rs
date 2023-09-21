@@ -26,7 +26,7 @@ fn main() -> std::io::Result<()> {
         cursor::MoveTo(0, 0)
     )?;
 
-    let mut tetris = Tetris::new(20, 23);
+    let mut tetris = Tetris::new(10, 23);
     tetris.play();
 
     execute!(
@@ -54,9 +54,12 @@ struct Block {
 }
 
 impl Block {
-    fn new() -> Block {
+    fn new(width: usize) -> Block {
         let color: Color = rand::random();
-        let coor = Coordinates { row: 4, col: 9 };
+        let coor = Coordinates {
+            row: 4,
+            col: width / 2,
+        };
         let piece: Piece = rand::random();
         let rotation_pos = rand::thread_rng().gen_range(0..4);
         let position = get_piece_position(piece, rotation_pos, coor);
@@ -338,7 +341,7 @@ impl Tetris {
             cols,
             rows,
             board: vec![vec![Square::EMPTY; cols]; rows],
-            block: Block::new(),
+            block: Block::new(cols),
         }
     }
 
@@ -398,7 +401,7 @@ impl Tetris {
             self.board[self.block.position[i][0]][self.block.position[i][1]] =
                 Square::OCCUPIED(self.block.color);
         }
-        self.block = Block::new();
+        self.block = Block::new(self.cols);
     }
 
     fn tick(&mut self) {
@@ -406,6 +409,7 @@ impl Tetris {
         block.down();
         if self.is_collision(block) {
             self.add_block();
+            self.check_lines_completed();
         } else {
             self.block.down();
         }
@@ -449,7 +453,7 @@ impl Tetris {
     }
 
     fn start(&mut self) {
-        self.block = Block::new();
+        self.block = Block::new(self.cols);
         println!("{}", self);
     }
 
@@ -474,6 +478,17 @@ impl Tetris {
                     col: sq[1],
                 })
         })
+    }
+
+    fn check_lines_completed(&mut self) {
+        self.board
+            .retain(|val| val.iter().any(|sq| *sq == Square::EMPTY));
+        let len = self.board.len();
+        if len < self.rows {
+            let mut v = vec![vec![Square::EMPTY; self.cols]; self.rows - len];
+            v.append(&mut self.board);
+            self.board = v;
+        }
     }
 }
 
