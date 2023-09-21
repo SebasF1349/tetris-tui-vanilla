@@ -49,14 +49,23 @@ struct Coordinates {
 struct Block {
     position: [[usize; 2]; 4],
     color: Color,
+    piece: Piece,
+    rotation_pos: usize,
 }
 
 impl Block {
     fn new() -> Block {
         let color: Color = rand::random();
         let coor = Coordinates { row: 4, col: 9 };
-        let position = get_random_piece(coor);
-        Block { position, color }
+        let piece: Piece = rand::random();
+        let rotation_pos = rand::thread_rng().gen_range(0..4);
+        let position = get_piece_position(piece, rotation_pos, coor);
+        Block {
+            position,
+            color,
+            piece,
+            rotation_pos,
+        }
     }
 
     fn down(&mut self) {
@@ -71,6 +80,18 @@ impl Block {
 
     fn right(&mut self) {
         self.position = self.position.map(|sq| [sq[0], sq[1] + 1]);
+    }
+
+    fn rotate(&mut self) {
+        self.rotation_pos = (self.rotation_pos + 1) % 4;
+        self.position = get_piece_position(
+            self.piece,
+            self.rotation_pos,
+            Coordinates {
+                row: self.position[0][0],
+                col: self.position[0][1],
+            },
+        );
     }
 }
 
@@ -99,16 +120,9 @@ impl Distribution<Piece> for Standard {
     }
 }
 
-fn get_random_piece(coor: Coordinates) -> [[usize; 2]; 4] {
-    let piece: Piece = rand::random();
-    let mut rng = rand::thread_rng();
-    let pos = rng.gen_range(0..4);
-    get_piece(piece, pos, coor)
-}
-
-fn get_piece(piece: Piece, pos: usize, coor: Coordinates) -> [[usize; 2]; 4] {
+fn get_piece_position(piece: Piece, pos: usize, coor: Coordinates) -> [[usize; 2]; 4] {
     match (piece, pos) {
-        (Piece::I, p) if p < 2 => [
+        (Piece::I, p) if p % 2 == 0 => [
             [coor.row, coor.col],
             [coor.row, coor.col + 1],
             [coor.row, coor.col + 2],
@@ -192,7 +206,7 @@ fn get_piece(piece: Piece, pos: usize, coor: Coordinates) -> [[usize; 2]; 4] {
             [coor.row - 2, coor.col],
             [coor.row - 1, coor.col + 1],
         ],
-        (Piece::S, p) if p < 2 => [
+        (Piece::S, p) if p % 2 == 0 => [
             [coor.row, coor.col],
             [coor.row, coor.col + 1],
             [coor.row - 1, coor.col + 1],
@@ -204,7 +218,7 @@ fn get_piece(piece: Piece, pos: usize, coor: Coordinates) -> [[usize; 2]; 4] {
             [coor.row - 1, coor.col - 1],
             [coor.row - 2, coor.col - 1],
         ],
-        (Piece::Z, p) if p < 2 => [
+        (Piece::Z, p) if p % 2 == 0 => [
             [coor.row, coor.col],
             [coor.row, coor.col - 1],
             [coor.row - 1, coor.col - 1],
@@ -366,7 +380,7 @@ impl Tetris {
                                 KeyEvents::LEFT => self.block_left(),
                                 KeyEvents::RIGHT => self.block_right(),
                                 KeyEvents::DOWN => self.block_down(),
-                                KeyEvents::ROTATE => (),
+                                KeyEvents::ROTATE => self.block_rotate(),
                             };
                         }
                         GameEvents::TICK => {
@@ -421,6 +435,15 @@ impl Tetris {
         block.right();
         if !self.is_collision(block) {
             self.block.right();
+            self.draw();
+        }
+    }
+
+    fn block_rotate(&mut self) {
+        let mut block = self.block.clone();
+        block.rotate();
+        if !self.is_collision(block) {
+            self.block.rotate();
             self.draw();
         }
     }
@@ -486,7 +509,7 @@ fn get_input(stdin: &mut std::io::Stdin) -> Option<KeyEvents> {
     }
 }
 
-fn hide_cursor() {
+/*fn hide_cursor() {
     print!("\x1B[?25l");
 }
 
@@ -501,6 +524,7 @@ fn clear_screen() {
 fn move_cursor(row: usize, col: usize) {
     print!("\x1B[{0};{1}H", row, col);
 }
+*/
 
 // tests are failing after adding pieces
 /*#[cfg(test)]
