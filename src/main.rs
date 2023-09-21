@@ -171,7 +171,7 @@ fn get_piece_position(piece: Piece, pos: usize, coor: Coordinates) -> [[usize; 2
             [coor.row, coor.col],
             [coor.row + 1, coor.col],
             [coor.row + 2, coor.col],
-            [coor.row + 2, coor.col - 1],
+            [coor.row + 2, coor.col + 1],
         ],
         (Piece::L, 2) => [
             [coor.row, coor.col],
