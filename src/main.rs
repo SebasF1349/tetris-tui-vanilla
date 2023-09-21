@@ -47,7 +47,7 @@ struct Coordinates {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Block {
-    piece: [[usize; 2]; 4],
+    position: [[usize; 2]; 4],
     color: Color,
 }
 
@@ -55,22 +55,22 @@ impl Block {
     fn new() -> Block {
         let color: Color = rand::random();
         let coor = Coordinates { row: 10, col: 4 };
-        let piece = get_random_piece(coor);
-        Block { piece, color }
+        let position = get_random_piece(coor);
+        Block { position, color }
     }
 
     fn down(&mut self) {
-        self.piece = self.piece.map(|sq| [sq[0] + 1, sq[1]]);
+        self.position = self.position.map(|sq| [sq[0] + 1, sq[1]]);
     }
 
     fn left(&mut self) {
-        if self.piece.into_iter().all(|sq| sq[1] > 0) {
-            self.piece = self.piece.map(|sq| [sq[0], sq[1] - 1]);
+        if self.position.into_iter().all(|sq| sq[1] > 0) {
+            self.position = self.position.map(|sq| [sq[0], sq[1] - 1]);
         }
     }
 
     fn right(&mut self) {
-        self.piece = self.piece.map(|sq| [sq[0], sq[1] + 1]);
+        self.position = self.position.map(|sq| [sq[0], sq[1] + 1]);
     }
 }
 
@@ -298,7 +298,7 @@ impl Display for Tetris {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut output = self.board.clone();
         for i in 0..4 {
-            output[self.block.piece[i][0]][self.block.piece[i][1]] =
+            output[self.block.position[i][0]][self.block.position[i][1]] =
                 Square::OCCUPIED(self.block.color);
         }
         let output: Vec<String> = output
@@ -381,7 +381,7 @@ impl Tetris {
 
     fn add_block(&mut self) {
         for i in 0..4 {
-            self.board[self.block.piece[i][0]][self.block.piece[i][1]] =
+            self.board[self.block.position[i][0]][self.block.position[i][1]] =
                 Square::OCCUPIED(self.block.color);
         }
         self.block = Block::new();
@@ -443,7 +443,7 @@ impl Tetris {
     }
 
     fn is_collision(&self, block: Block) -> bool {
-        block.piece.into_iter().any(|sq| {
+        block.position.into_iter().any(|sq| {
             sq[1] >= self.cols
                 || sq[0] >= self.rows
                 || self.is_occupied(Coordinates {
