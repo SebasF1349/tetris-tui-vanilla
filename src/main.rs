@@ -48,7 +48,7 @@ struct Block {
 impl Block {
     fn new() -> Block {
         let color: Color = rand::random();
-        let piece = get_piece(10, 4);
+        let piece = get_random_piece(10, 4);
         Block { piece, color }
     }
 
@@ -92,10 +92,14 @@ impl Distribution<Piece> for Standard {
     }
 }
 
-fn get_piece(col: usize, row: usize) -> [[usize; 2]; 4] {
+fn get_random_piece(col: usize, row: usize) -> [[usize; 2]; 4] {
     let piece: Piece = rand::random();
     let mut rng = rand::thread_rng();
     let pos = rng.gen_range(0..4);
+    get_piece(piece, pos, row, col)
+}
+
+fn get_piece(piece: Piece, pos: usize, row: usize, col: usize) -> [[usize; 2]; 4] {
     match (piece, pos) {
         (Piece::I, p) if p < 2 => [[row, col], [row, col + 1], [row, col + 2], [row, col + 3]],
         (Piece::I, _) => [[row, col], [row - 1, col], [row - 2, col], [row - 3, col]],
@@ -485,7 +489,7 @@ mod tests {
         let mut tetris = Tetris::new(10, 10);
         tetris.board[2][3] = Square::OCCUPIED(tetris.block.color);
         let color: Color = rand::random();
-        let piece = get_piece(2, 3);
+        let piece = get_random_piece(2, 3);
         let block = Block { color, piece };
         assert!(tetris.is_collision(block));
     }
