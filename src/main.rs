@@ -54,7 +54,7 @@ struct Block {
 impl Block {
     fn new() -> Block {
         let color: Color = rand::random();
-        let coor = Coordinates { row: 3, col: 9 };
+        let coor = Coordinates { row: 4, col: 9 };
         let position = get_random_piece(coor);
         Block { position, color }
     }
