@@ -311,6 +311,7 @@ struct Tetris {
     rows: usize,
     board: Vec<Vec<Square>>,
     block: Block,
+    points: usize,
 }
 
 impl Display for Tetris {
@@ -330,9 +331,10 @@ impl Display for Tetris {
             .collect();
         write!(
             f,
-            "{}\n\r{}",
+            "{}\n\r{}\n\r\n\rPoints: {}",
             output.join("\n\r"),
-            "\u{2594}".repeat(self.cols * 2 + 2)
+            "\u{2594}".repeat(self.cols * 2 + 2),
+            self.points
         )
     }
 }
@@ -344,6 +346,7 @@ impl Tetris {
             rows,
             board: vec![vec![Square::EMPTY; cols]; rows],
             block: Block::new(cols),
+            points: 0,
         }
     }
 
@@ -412,7 +415,7 @@ impl Tetris {
         block.down();
         if self.is_collision(&block) {
             self.add_block();
-            self.check_lines_completed();
+            self.remove_lines_completed();
             if self.is_end() {
                 return Err(());
             }
@@ -492,7 +495,7 @@ impl Tetris {
         })
     }
 
-    fn check_lines_completed(&mut self) {
+    fn remove_lines_completed(&mut self) {
         self.board
             .retain(|val| val.iter().any(|sq| *sq == Square::EMPTY));
         let len = self.board.len();
@@ -500,6 +503,7 @@ impl Tetris {
             let mut v = vec![vec![Square::EMPTY; self.cols]; self.rows - len];
             v.append(&mut self.board);
             self.board = v;
+            self.points += self.rows - len;
         }
     }
 
