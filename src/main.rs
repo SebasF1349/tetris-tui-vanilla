@@ -389,7 +389,9 @@ impl Tetris {
                             };
                         }
                         GameEvents::TICK => {
-                            self.tick();
+                            if Err(()) == self.tick() {
+                                break;
+                            }
                         }
                     };
                 }
@@ -403,25 +405,33 @@ impl Tetris {
             self.board[self.block.position[i][0]][self.block.position[i][1]] =
                 Square::OCCUPIED(self.block.color);
         }
-        self.block = Block::new(self.cols);
     }
 
-    fn tick(&mut self) {
+    fn tick(&mut self) -> Result<(), ()> {
         let mut block = self.block.clone();
         block.down();
-        if self.is_collision(block) {
+        if self.is_collision(&block) {
             self.add_block();
             self.check_lines_completed();
+            if self.is_end() {
+                return Err(());
+            }
+            let block = Block::new(self.cols);
+            if self.is_collision(&block) {
+                return Err(());
+            }
+            self.block = block;
         } else {
             self.block.down();
         }
         self.draw();
+        return Ok(());
     }
 
     fn block_down(&mut self) {
         let mut block = self.block.clone();
         block.down();
-        if !self.is_collision(block) {
+        if !self.is_collision(&block) {
             self.block.down();
             self.draw();
         }
@@ -430,7 +440,7 @@ impl Tetris {
     fn block_left(&mut self) {
         let mut block = self.block.clone();
         block.left();
-        if !self.is_collision(block) {
+        if !self.is_collision(&block) {
             self.block.left();
             self.draw();
         }
@@ -439,7 +449,7 @@ impl Tetris {
     fn block_right(&mut self) {
         let mut block = self.block.clone();
         block.right();
-        if !self.is_collision(block) {
+        if !self.is_collision(&block) {
             self.block.right();
             self.draw();
         }
@@ -448,7 +458,7 @@ impl Tetris {
     fn block_rotate(&mut self) {
         let mut block = self.block.clone();
         block.rotate();
-        if !self.is_collision(block) {
+        if !self.is_collision(&block) {
             self.block.rotate();
             self.draw();
         }
@@ -471,7 +481,7 @@ impl Tetris {
         }
     }
 
-    fn is_collision(&self, block: Block) -> bool {
+    fn is_collision(&self, block: &Block) -> bool {
         block.position.into_iter().any(|sq| {
             sq[1] >= self.cols
                 || sq[0] >= self.rows
@@ -491,6 +501,14 @@ impl Tetris {
             v.append(&mut self.board);
             self.board = v;
         }
+    }
+
+    fn is_end(&self) -> bool {
+        self.board
+            .iter()
+            .rev()
+            .skip(self.rows - 4)
+            .any(|val| val.iter().any(|sq| *sq != Square::EMPTY))
     }
 }
 
@@ -563,6 +581,6 @@ mod tests {
         let color: Color = rand::random();
         let piece = get_random_piece(2, 3);
         let block = Block { color, piece };
-        assert!(tetris.is_collision(block));
+        assert!(tetris.is_collision(&block));
     }
 }*/
