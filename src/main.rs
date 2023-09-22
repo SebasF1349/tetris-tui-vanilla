@@ -62,7 +62,7 @@ impl Block {
         };
         let piece: Piece = rand::random();
         let rotation_pos = rand::thread_rng().gen_range(0..4);
-        let position = get_piece_position(piece, rotation_pos, coor);
+        let position = get_piece_position(piece, rotation_pos, coor).unwrap();
         Block {
             position,
             color,
@@ -94,7 +94,8 @@ impl Block {
                 row: self.position[0][0],
                 col: self.position[0][1],
             },
-        );
+        )
+        .unwrap_or(self.position);
     }
 }
 
@@ -123,122 +124,123 @@ impl Distribution<Piece> for Standard {
     }
 }
 
-fn get_piece_position(piece: Piece, pos: usize, coor: Coordinates) -> [[usize; 2]; 4] {
+fn get_piece_position(piece: Piece, pos: usize, coor: Coordinates) -> Result<[[usize; 2]; 4], ()> {
     match (piece, pos) {
-        (Piece::I, p) if p % 2 == 0 => [
+        (Piece::I, p) if p % 2 == 0 && coor.col > 0 => Ok([
             [coor.row, coor.col],
             [coor.row, coor.col + 1],
             [coor.row, coor.col + 2],
             [coor.row, coor.col - 1],
-        ],
-        (Piece::I, _) => [
+        ]),
+        (Piece::I, p) if p % 2 == 1 => Ok([
             [coor.row, coor.col],
             [coor.row - 1, coor.col],
             [coor.row - 2, coor.col],
             [coor.row + 1, coor.col],
-        ],
-        (Piece::J, 0) => [
+        ]),
+        (Piece::J, 0) if coor.col > 0 => Ok([
             [coor.row, coor.col],
             [coor.row, coor.col - 1],
             [coor.row, coor.col + 1],
             [coor.row + 1, coor.col + 1],
-        ],
-        (Piece::J, 1) => [
+        ]),
+        (Piece::J, 1) if coor.col > 0 => Ok([
             [coor.row, coor.col],
             [coor.row - 1, coor.col],
             [coor.row + 1, coor.col],
             [coor.row + 1, coor.col - 1],
-        ],
-        (Piece::J, 2) => [
+        ]),
+        (Piece::J, 2) if coor.col > 0 => Ok([
             [coor.row, coor.col],
             [coor.row, coor.col + 1],
             [coor.row, coor.col - 1],
             [coor.row - 1, coor.col - 1],
-        ],
-        (Piece::J, _) => [
+        ]),
+        (Piece::J, 3) => Ok([
             [coor.row, coor.col],
             [coor.row - 1, coor.col],
             [coor.row - 1, coor.col + 1],
             [coor.row + 1, coor.col],
-        ],
-        (Piece::L, 0) => [
+        ]),
+        (Piece::L, 0) if coor.col > 0 => Ok([
             [coor.row, coor.col],
             [coor.row, coor.col + 1],
             [coor.row, coor.col - 1],
             [coor.row - 1, coor.col + 1],
-        ],
-        (Piece::L, 1) => [
+        ]),
+        (Piece::L, 1) => Ok([
             [coor.row, coor.col],
             [coor.row - 1, coor.col],
             [coor.row + 1, coor.col],
             [coor.row + 1, coor.col + 1],
-        ],
-        (Piece::L, 2) => [
+        ]),
+        (Piece::L, 2) if coor.col > 0 => Ok([
             [coor.row, coor.col],
             [coor.row, coor.col + 1],
             [coor.row, coor.col - 1],
             [coor.row + 1, coor.col - 1],
-        ],
-        (Piece::L, _) => [
+        ]),
+        (Piece::L, 3) => Ok([
             [coor.row, coor.col],
             [coor.row + 1, coor.col],
             [coor.row - 1, coor.col],
             [coor.row - 1, coor.col + 1],
-        ],
-        (Piece::T, 0) => [
+        ]),
+        (Piece::T, 0) if coor.col > 0 => Ok([
             [coor.row, coor.col],
             [coor.row, coor.col - 1],
             [coor.row, coor.col + 1],
             [coor.row + 1, coor.col],
-        ],
-        (Piece::T, 1) => [
+        ]),
+        (Piece::T, 1) if coor.col > 0 => Ok([
             [coor.row, coor.col],
             [coor.row + 1, coor.col],
             [coor.row - 1, coor.col],
             [coor.row, coor.col - 1],
-        ],
-        (Piece::T, 2) => [
+        ]),
+        (Piece::T, 2) if coor.col > 0 => Ok([
             [coor.row, coor.col],
             [coor.row, coor.col + 1],
             [coor.row, coor.col - 1],
             [coor.row - 1, coor.col],
-        ],
-        (Piece::T, _) => [
+        ]),
+        (Piece::T, 3) => Ok([
             [coor.row, coor.col],
             [coor.row - 1, coor.col],
             [coor.row + 1, coor.col],
             [coor.row, coor.col + 1],
-        ],
-        (Piece::S, p) if p % 2 == 0 => [
+        ]),
+        (Piece::S, p) if p % 2 == 0 && coor.col > 0 => Ok([
             [coor.row, coor.col],
             [coor.row, coor.col - 1],
             [coor.row - 1, coor.col],
             [coor.row - 1, coor.col + 1],
-        ],
-        (Piece::S, _) => [
+        ]),
+        (Piece::S, p) if p % 2 == 1 => Ok([
             [coor.row, coor.col],
             [coor.row - 1, coor.col],
             [coor.row, coor.col + 1],
             [coor.row + 1, coor.col + 1],
-        ],
-        (Piece::Z, p) if p % 2 == 0 => [
+        ]),
+        (Piece::Z, p) if p % 2 == 0 && coor.col > 0 => Ok([
             [coor.row, coor.col],
             [coor.row, coor.col - 1],
             [coor.row + 1, coor.col],
             [coor.row + 1, coor.col + 1],
-        ],
-        (Piece::Z, _) => [
+        ]),
+        (Piece::Z, p) if p % 2 == 1 => Ok([
             [coor.row, coor.col],
             [coor.row + 1, coor.col],
             [coor.row, coor.col + 1],
             [coor.row - 1, coor.col + 1],
-        ],
-        (Piece::O, _) => [
+        ]),
+        (Piece::O, _) => Ok([
             [coor.row, coor.col],
             [coor.row, coor.col + 1],
             [coor.row - 1, coor.col],
             [coor.row - 1, coor.col + 1],
-        ],
+        ]),
+        (_, _) => Err(()),
     }
 }
 
