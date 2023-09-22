@@ -187,7 +187,7 @@ fn get_piece_position(piece: Piece, pos: usize, coor: Coordinates) -> Result<[[u
             [coor.row, coor.col],
             [coor.row + 1, coor.col],
             [coor.row - 1, coor.col],
-            [coor.row - 1, coor.col + 1],
+            [coor.row - 1, coor.col - 1],
         ]),
         (Piece::T, 0) if coor.col > 0 => Ok([
             [coor.row, coor.col],
