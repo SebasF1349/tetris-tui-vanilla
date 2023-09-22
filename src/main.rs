@@ -86,16 +86,19 @@ impl Block {
     }
 
     fn rotate(&mut self) {
-        self.rotation_pos = (self.rotation_pos + 1) % 4;
-        self.position = get_piece_position(
+        let rotation_pos = (self.rotation_pos + 1) % 4;
+        let position = get_piece_position(
             self.piece,
-            self.rotation_pos,
+            rotation_pos,
             Coordinates {
                 row: self.position[0][0],
                 col: self.position[0][1],
             },
-        )
-        .unwrap_or(self.position);
+        );
+        if let Ok(pos) = position {
+            self.rotation_pos = rotation_pos;
+            self.position = pos;
+        }
     }
 }
 
