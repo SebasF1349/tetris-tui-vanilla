@@ -411,15 +411,31 @@ impl Tetris {
                 Ok(update) => {
                     match update {
                         GameEvents::KEY(key) => {
+                            let mut game_state = state.lock().unwrap();
                             match key {
                                 KeyEvents::QUIT => break,
-                                KeyEvents::LEFT => self.block_left(),
-                                KeyEvents::RIGHT => self.block_right(),
-                                KeyEvents::DOWN => self.block_down(),
-                                KeyEvents::ROTATE => self.block_rotate(),
+                                KeyEvents::LEFT => {
+                                    if *game_state == GameStates::PLAYING {
+                                        self.block_left()
+                                    }
+                                }
+                                KeyEvents::RIGHT => {
+                                    if *game_state == GameStates::PLAYING {
+                                        self.block_right()
+                                    }
+                                }
+                                KeyEvents::DOWN => {
+                                    if *game_state == GameStates::PLAYING {
+                                        self.block_down()
+                                    }
+                                }
+                                KeyEvents::ROTATE => {
+                                    if *game_state == GameStates::PLAYING {
+                                        self.block_rotate()
+                                    }
+                                }
                                 KeyEvents::PLAY => (),
                                 KeyEvents::PAUSE => {
-                                    let mut game_state = state.lock().unwrap();
                                     if *game_state == GameStates::PLAYING {
                                         *game_state = GameStates::PAUSE;
                                         self.state = GameStates::PAUSE;
