@@ -367,7 +367,7 @@ impl Tetris {
             board: vec![vec![Square::EMPTY; cols]; rows],
             block: Block::new(cols),
             points: 0,
-            state: GameStates::PLAYING,
+            state: GameStates::MENU,
         }
     }
 
@@ -375,8 +375,6 @@ impl Tetris {
         let (tx, rx) = mpsc::channel();
 
         let state = Arc::new(Mutex::new(GameStates::PLAYING));
-
-        self.start();
 
         {
             let tx = tx.clone();
@@ -406,54 +404,72 @@ impl Tetris {
             });
         }
 
+        self.draw_menu();
         loop {
-            match rx.recv() {
-                Ok(update) => {
-                    match update {
-                        GameEvents::KEY(key) => {
-                            let mut game_state = state.lock().unwrap();
-                            match key {
-                                KeyEvents::QUIT => break,
-                                KeyEvents::LEFT => {
-                                    if *game_state == GameStates::PLAYING {
-                                        self.block_left()
-                                    }
-                                }
-                                KeyEvents::RIGHT => {
-                                    if *game_state == GameStates::PLAYING {
-                                        self.block_right()
-                                    }
-                                }
-                                KeyEvents::DOWN => {
-                                    if *game_state == GameStates::PLAYING {
-                                        self.block_down()
-                                    }
-                                }
-                                KeyEvents::ROTATE => {
-                                    if *game_state == GameStates::PLAYING {
-                                        self.block_rotate()
-                                    }
-                                }
-                                KeyEvents::PLAY => (),
-                                KeyEvents::PAUSE => {
-                                    if *game_state == GameStates::PLAYING {
-                                        *game_state = GameStates::PAUSE;
-                                        self.state = GameStates::PAUSE;
-                                    } else if *game_state == GameStates::PAUSE {
-                                        *game_state = GameStates::PLAYING;
-                                        self.state = GameStates::PLAYING;
-                                    }
-                                }
-                            };
-                        }
-                        GameEvents::TICK => {
-                            if Err(()) == self.tick() {
-                                break;
-                            }
-                        }
-                    };
+            if self.state == GameStates::MENU {
+                match rx.recv() {
+                    Ok(GameEvents::KEY(KeyEvents::PLAY)) => {
+                        let mut game_state = state.lock().unwrap();
+                        *game_state = GameStates::PLAYING;
+                        self.state = GameStates::PLAYING;
+                        self.start();
+                    }
+                    Ok(GameEvents::KEY(KeyEvents::QUIT)) => {
+                        break;
+                    }
+                    Ok(_) => (),
+                    Err(err) => panic!("{}", err),
                 }
-                Err(err) => panic!("{}", err),
+            }
+            if self.state == GameStates::PLAYING {
+                match rx.recv() {
+                    Ok(update) => {
+                        match update {
+                            GameEvents::KEY(key) => {
+                                let mut game_state = state.lock().unwrap();
+                                match key {
+                                    KeyEvents::QUIT => break,
+                                    KeyEvents::LEFT => {
+                                        if *game_state == GameStates::PLAYING {
+                                            self.block_left()
+                                        }
+                                    }
+                                    KeyEvents::RIGHT => {
+                                        if *game_state == GameStates::PLAYING {
+                                            self.block_right()
+                                        }
+                                    }
+                                    KeyEvents::DOWN => {
+                                        if *game_state == GameStates::PLAYING {
+                                            self.block_down()
+                                        }
+                                    }
+                                    KeyEvents::ROTATE => {
+                                        if *game_state == GameStates::PLAYING {
+                                            self.block_rotate()
+                                        }
+                                    }
+                                    KeyEvents::PLAY => (),
+                                    KeyEvents::PAUSE => {
+                                        if *game_state == GameStates::PLAYING {
+                                            *game_state = GameStates::PAUSE;
+                                            self.state = GameStates::PAUSE;
+                                        } else if *game_state == GameStates::PAUSE {
+                                            *game_state = GameStates::PLAYING;
+                                            self.state = GameStates::PLAYING;
+                                        }
+                                    }
+                                };
+                            }
+                            GameEvents::TICK => {
+                                if Err(()) == self.tick() {
+                                    break;
+                                }
+                            }
+                        };
+                    }
+                    Err(err) => panic!("{}", err),
+                }
             }
         }
     }
@@ -482,7 +498,7 @@ impl Tetris {
         } else {
             self.block.down();
         }
-        self.draw();
+        self.draw_board();
         return Ok(());
     }
 
@@ -491,7 +507,7 @@ impl Tetris {
         block.down();
         if !self.is_collision(&block) {
             self.block.down();
-            self.draw();
+            self.draw_board();
         }
     }
 
@@ -500,7 +516,7 @@ impl Tetris {
         block.left();
         if !self.is_collision(&block) {
             self.block.left();
-            self.draw();
+            self.draw_board();
         }
     }
 
@@ -509,7 +525,7 @@ impl Tetris {
         block.right();
         if !self.is_collision(&block) {
             self.block.right();
-            self.draw();
+            self.draw_board();
         }
     }
 
@@ -518,18 +534,36 @@ impl Tetris {
         block.rotate();
         if !self.is_collision(&block) {
             self.block.rotate();
-            self.draw();
+            self.draw_board();
         }
     }
 
     fn start(&mut self) {
         self.block = Block::new(self.cols);
+        execute!(stdout(), Clear(ClearType::All), cursor::MoveTo(0, 0)).unwrap();
         println!("{}", self);
     }
 
-    fn draw(&self) {
+    fn draw_board(&self) {
         execute!(stdout(), Clear(ClearType::All), cursor::MoveTo(0, 0)).unwrap();
         println!("{}", self);
+    }
+
+    fn draw_menu(&self) {
+        execute!(stdout(), Clear(ClearType::All), cursor::MoveTo(0, 0)).unwrap();
+        println!(
+            "TETRIS\n\r
+
+KEYS:\n\r
+P => Play\n\r
+A (or ←) => Move Block to the left\n\r
+D (or →) => Move Block to the right\n\r
+S (or ↓) => Move Block down\n\r
+W (or ↑) => Rotate Block\n\r
+
+[SPACE] => Pause\n\r
+Q => Quit\n\r"
+        );
     }
 
     fn is_occupied(&self, coor: Coordinates) -> bool {
@@ -592,10 +626,6 @@ fn get_input(stdin: &mut std::io::Stdin) -> Option<KeyEvents> {
                         Ok("[B") => Some(KeyEvents::DOWN),
                         Ok("[C") => Some(KeyEvents::RIGHT),
                         Ok("[D") => Some(KeyEvents::LEFT),
-                        Ok(p) => {
-                            println!("{}", p);
-                            Some(KeyEvents::PLAY)
-                        }
                         _ => None,
                     },
                     Err(msg) => {
