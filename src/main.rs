@@ -1,4 +1,11 @@
-use std::{fmt, fmt::Display, io::stdout, sync::mpsc, thread, time::Duration};
+use std::{
+    fmt,
+    fmt::Display,
+    io::stdout,
+    sync::{mpsc, Arc, Mutex},
+    thread,
+    time::Duration,
+};
 
 use crossterm::{
     cursor, execute, style,
@@ -294,6 +301,13 @@ impl ToString for Square {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+enum GameStates {
+    PLAYING,
+    PAUSE,
+    MENU,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
 enum GameEvents {
     TICK,
     KEY(KeyEvents),
@@ -306,6 +320,8 @@ enum KeyEvents {
     RIGHT,
     ROTATE,
     QUIT,
+    PLAY,
+    PAUSE,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -315,6 +331,7 @@ struct Tetris {
     board: Vec<Vec<Square>>,
     block: Block,
     points: usize,
+    state: GameStates,
 }
 
 impl Display for Tetris {
@@ -350,18 +367,26 @@ impl Tetris {
             board: vec![vec![Square::EMPTY; cols]; rows],
             block: Block::new(cols),
             points: 0,
+            state: GameStates::PLAYING,
         }
     }
 
     fn play(&mut self) {
         let (tx, rx) = mpsc::channel();
+
+        let state = Arc::new(Mutex::new(GameStates::PLAYING));
+
         self.start();
 
         {
             let tx = tx.clone();
+            let state = Arc::clone(&state);
             thread::spawn(move || loop {
                 thread::sleep(Duration::from_millis(1000));
-                tx.send(GameEvents::TICK).unwrap();
+                let game_state = state.lock().unwrap();
+                if *game_state == GameStates::PLAYING {
+                    tx.send(GameEvents::TICK).unwrap();
+                }
             });
         }
 
@@ -392,6 +417,17 @@ impl Tetris {
                                 KeyEvents::RIGHT => self.block_right(),
                                 KeyEvents::DOWN => self.block_down(),
                                 KeyEvents::ROTATE => self.block_rotate(),
+                                KeyEvents::PLAY => (),
+                                KeyEvents::PAUSE => {
+                                    let mut game_state = state.lock().unwrap();
+                                    if *game_state == GameStates::PLAYING {
+                                        *game_state = GameStates::PAUSE;
+                                        self.state = GameStates::PAUSE;
+                                    } else if *game_state == GameStates::PAUSE {
+                                        *game_state = GameStates::PLAYING;
+                                        self.state = GameStates::PLAYING;
+                                    }
+                                }
                             };
                         }
                         GameEvents::TICK => {
@@ -530,14 +566,20 @@ fn get_input(stdin: &mut std::io::Stdin) -> Option<KeyEvents> {
             Ok("a") => Some(KeyEvents::LEFT),
             Ok("d") => Some(KeyEvents::RIGHT),
             Ok("q") => Some(KeyEvents::QUIT),
+            Ok("p") => Some(KeyEvents::PLAY),
+            Ok(" ") => Some(KeyEvents::PAUSE),
             Ok("\x1b") => {
                 let code = &mut [0u8; 2];
                 match stdin.read(code) {
                     Ok(_) => match std::str::from_utf8(code) {
                         Ok("[A") => Some(KeyEvents::ROTATE),
                         Ok("[B") => Some(KeyEvents::DOWN),
-                        Ok("[D") => Some(KeyEvents::LEFT),
                         Ok("[C") => Some(KeyEvents::RIGHT),
+                        Ok("[D") => Some(KeyEvents::LEFT),
+                        Ok(p) => {
+                            println!("{}", p);
+                            Some(KeyEvents::PLAY)
+                        }
                         _ => None,
                     },
                     Err(msg) => {
