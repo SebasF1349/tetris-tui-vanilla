@@ -413,6 +413,7 @@ impl Tetris {
                         *game_state = GameStates::PLAYING;
                         self.state = GameStates::PLAYING;
                         self.start();
+                        println!("HERE!");
                     }
                     Ok(GameEvents::KEY(KeyEvents::QUIT)) => {
                         break;
@@ -420,44 +421,22 @@ impl Tetris {
                     Ok(_) => (),
                     Err(err) => panic!("{}", err),
                 }
-            }
-            if self.state == GameStates::PLAYING {
+            } else if self.state == GameStates::PLAYING {
                 match rx.recv() {
                     Ok(update) => {
                         match update {
                             GameEvents::KEY(key) => {
-                                let mut game_state = state.lock().unwrap();
                                 match key {
                                     KeyEvents::QUIT => break,
-                                    KeyEvents::LEFT => {
-                                        if *game_state == GameStates::PLAYING {
-                                            self.block_left()
-                                        }
-                                    }
-                                    KeyEvents::RIGHT => {
-                                        if *game_state == GameStates::PLAYING {
-                                            self.block_right()
-                                        }
-                                    }
-                                    KeyEvents::DOWN => {
-                                        if *game_state == GameStates::PLAYING {
-                                            self.block_down()
-                                        }
-                                    }
-                                    KeyEvents::ROTATE => {
-                                        if *game_state == GameStates::PLAYING {
-                                            self.block_rotate()
-                                        }
-                                    }
+                                    KeyEvents::LEFT => self.block_left(),
+                                    KeyEvents::RIGHT => self.block_right(),
+                                    KeyEvents::DOWN => self.block_down(),
+                                    KeyEvents::ROTATE => self.block_rotate(),
                                     KeyEvents::PLAY => (),
                                     KeyEvents::PAUSE => {
-                                        if *game_state == GameStates::PLAYING {
-                                            *game_state = GameStates::PAUSE;
-                                            self.state = GameStates::PAUSE;
-                                        } else if *game_state == GameStates::PAUSE {
-                                            *game_state = GameStates::PLAYING;
-                                            self.state = GameStates::PLAYING;
-                                        }
+                                        let mut game_state = state.lock().unwrap();
+                                        *game_state = GameStates::PAUSE;
+                                        self.state = GameStates::PAUSE;
                                     }
                                 };
                             }
@@ -466,6 +445,26 @@ impl Tetris {
                                     break;
                                 }
                             }
+                        };
+                    }
+                    Err(err) => panic!("{}", err),
+                }
+            } else if self.state == GameStates::PAUSE {
+                match rx.recv() {
+                    Ok(update) => {
+                        match update {
+                            GameEvents::KEY(key) => {
+                                match key {
+                                    KeyEvents::QUIT => break,
+                                    KeyEvents::PAUSE => {
+                                        let mut game_state = state.lock().unwrap();
+                                        *game_state = GameStates::PLAYING;
+                                        self.state = GameStates::PLAYING;
+                                    }
+                                    _ => (),
+                                };
+                            }
+                            _ => (),
                         };
                     }
                     Err(err) => panic!("{}", err),
