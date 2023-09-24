@@ -349,13 +349,23 @@ impl Display for Tetris {
                 format!("\u{2590}{}\u{258C}", ret.join(""))
             })
             .collect();
-        write!(
-            f,
-            "{}\n\r{}\n\r\n\rPoints: {}",
-            output.join("\n\r"),
-            "\u{2594}".repeat(self.cols * 2 + 2),
-            self.points
-        )
+        if self.state == GameStates::PAUSE {
+            write!(
+                f,
+                "{}\n\r{}\n\r\n\rPoints: {}\n\r\n\rGAME PAUSED",
+                output.join("\n\r"),
+                "\u{2594}".repeat(self.cols * 2 + 2),
+                self.points
+            )
+        } else {
+            write!(
+                f,
+                "{}\n\r{}\n\r\n\rPoints: {}",
+                output.join("\n\r"),
+                "\u{2594}".repeat(self.cols * 2 + 2),
+                self.points
+            )
+        }
     }
 }
 
@@ -433,9 +443,9 @@ impl Tetris {
                             let mut game_state = state.lock().unwrap();
                             *game_state = GameStates::PAUSE;
                             self.state = GameStates::PAUSE;
+                            self.draw_board();
                         }
                     },
-
                     Ok(GameEvents::TICK) => {
                         if Err(()) == self.tick() {
                             break;
@@ -451,6 +461,7 @@ impl Tetris {
                                 let mut game_state = state.lock().unwrap();
                                 *game_state = GameStates::PLAYING;
                                 self.state = GameStates::PLAYING;
+                                self.draw_board();
                             }
                             _ => (),
                         };
