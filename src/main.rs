@@ -305,6 +305,7 @@ enum GameStates {
     PLAYING,
     PAUSE,
     MENU,
+    END_SCREEN,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -353,6 +354,14 @@ impl Display for Tetris {
             write!(
                 f,
                 "{}\n\r{}\n\r\n\rPoints: {}\n\r\n\rGAME PAUSED",
+                output.join("\n\r"),
+                "\u{2594}".repeat(self.cols * 2 + 2),
+                self.points
+            )
+        } else if self.state == GameStates::END_SCREEN {
+            write!(
+                f,
+                "{}\n\r{}\n\r\n\rPoints: {}\n\r\n\rYOU LOST!\n\rPress p to restart or q to quit",
                 output.join("\n\r"),
                 "\u{2594}".repeat(self.cols * 2 + 2),
                 self.points
@@ -448,7 +457,8 @@ impl Tetris {
                     },
                     Ok(GameEvents::TICK) => {
                         if Err(()) == self.tick() {
-                            break;
+                            self.state = GameStates::END_SCREEN;
+                            self.draw_board();
                         }
                     }
                     Err(err) => panic!("{}", err),
@@ -462,6 +472,23 @@ impl Tetris {
                                 *game_state = GameStates::PLAYING;
                                 self.state = GameStates::PLAYING;
                                 self.draw_board();
+                            }
+                            _ => (),
+                        };
+                    }
+                    Ok(GameEvents::TICK) => (),
+                    Err(err) => panic!("{}", err),
+                },
+                GameStates::END_SCREEN => match rx.recv() {
+                    Ok(GameEvents::KEY(key)) => {
+                        match key {
+                            KeyEvents::QUIT => break,
+                            KeyEvents::PLAY => {
+                                *self = Tetris::new(10, 23);
+                                let mut game_state = state.lock().unwrap();
+                                *game_state = GameStates::PLAYING;
+                                self.state = GameStates::PLAYING;
+                                self.start();
                             }
                             _ => (),
                         };
