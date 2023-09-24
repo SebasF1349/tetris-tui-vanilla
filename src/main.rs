@@ -406,69 +406,58 @@ impl Tetris {
 
         self.draw_menu();
         loop {
-            if self.state == GameStates::MENU {
-                match rx.recv() {
+            match self.state {
+                GameStates::MENU => match rx.recv() {
                     Ok(GameEvents::KEY(KeyEvents::PLAY)) => {
                         let mut game_state = state.lock().unwrap();
                         *game_state = GameStates::PLAYING;
                         self.state = GameStates::PLAYING;
                         self.start();
-                        println!("HERE!");
                     }
                     Ok(GameEvents::KEY(KeyEvents::QUIT)) => {
                         break;
                     }
                     Ok(_) => (),
                     Err(err) => panic!("{}", err),
-                }
-            } else if self.state == GameStates::PLAYING {
-                match rx.recv() {
-                    Ok(update) => {
-                        match update {
-                            GameEvents::KEY(key) => {
-                                match key {
-                                    KeyEvents::QUIT => break,
-                                    KeyEvents::LEFT => self.block_left(),
-                                    KeyEvents::RIGHT => self.block_right(),
-                                    KeyEvents::DOWN => self.block_down(),
-                                    KeyEvents::ROTATE => self.block_rotate(),
-                                    KeyEvents::PLAY => (),
-                                    KeyEvents::PAUSE => {
-                                        let mut game_state = state.lock().unwrap();
-                                        *game_state = GameStates::PAUSE;
-                                        self.state = GameStates::PAUSE;
-                                    }
-                                };
-                            }
-                            GameEvents::TICK => {
-                                if Err(()) == self.tick() {
-                                    break;
-                                }
+                },
+                GameStates::PLAYING => match rx.recv() {
+                    Ok(GameEvents::KEY(key)) => {
+                        match key {
+                            KeyEvents::QUIT => break,
+                            KeyEvents::LEFT => self.block_left(),
+                            KeyEvents::RIGHT => self.block_right(),
+                            KeyEvents::DOWN => self.block_down(),
+                            KeyEvents::ROTATE => self.block_rotate(),
+                            KeyEvents::PLAY => (),
+                            KeyEvents::PAUSE => {
+                                let mut game_state = state.lock().unwrap();
+                                *game_state = GameStates::PAUSE;
+                                self.state = GameStates::PAUSE;
                             }
                         };
                     }
+                    Ok(GameEvents::TICK) => {
+                        if Err(()) == self.tick() {
+                            break;
+                        }
+                    }
                     Err(err) => panic!("{}", err),
-                }
-            } else if self.state == GameStates::PAUSE {
-                match rx.recv() {
-                    Ok(update) => {
-                        match update {
-                            GameEvents::KEY(key) => {
-                                match key {
-                                    KeyEvents::QUIT => break,
-                                    KeyEvents::PAUSE => {
-                                        let mut game_state = state.lock().unwrap();
-                                        *game_state = GameStates::PLAYING;
-                                        self.state = GameStates::PLAYING;
-                                    }
-                                    _ => (),
-                                };
+                },
+                GameStates::PAUSE => match rx.recv() {
+                    Ok(GameEvents::KEY(key)) => {
+                        match key {
+                            KeyEvents::QUIT => break,
+                            KeyEvents::PAUSE => {
+                                let mut game_state = state.lock().unwrap();
+                                *game_state = GameStates::PLAYING;
+                                self.state = GameStates::PLAYING;
                             }
                             _ => (),
                         };
                     }
+                    Ok(GameEvents::TICK) => (),
                     Err(err) => panic!("{}", err),
-                }
+                },
             }
         }
     }
