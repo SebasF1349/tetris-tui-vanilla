@@ -408,34 +408,34 @@ impl Tetris {
         loop {
             match self.state {
                 GameStates::MENU => match rx.recv() {
-                    Ok(GameEvents::KEY(KeyEvents::PLAY)) => {
-                        let mut game_state = state.lock().unwrap();
-                        *game_state = GameStates::PLAYING;
-                        self.state = GameStates::PLAYING;
-                        self.start();
-                    }
-                    Ok(GameEvents::KEY(KeyEvents::QUIT)) => {
-                        break;
-                    }
-                    Ok(_) => (),
+                    Ok(GameEvents::KEY(key)) => match key {
+                        KeyEvents::PLAY => {
+                            let mut game_state = state.lock().unwrap();
+                            *game_state = GameStates::PLAYING;
+                            self.state = GameStates::PLAYING;
+                            self.start();
+                        }
+                        KeyEvents::QUIT => break,
+                        _ => (),
+                    },
+                    Ok(GameEvents::TICK) => (),
                     Err(err) => panic!("{}", err),
                 },
                 GameStates::PLAYING => match rx.recv() {
-                    Ok(GameEvents::KEY(key)) => {
-                        match key {
-                            KeyEvents::QUIT => break,
-                            KeyEvents::LEFT => self.block_left(),
-                            KeyEvents::RIGHT => self.block_right(),
-                            KeyEvents::DOWN => self.block_down(),
-                            KeyEvents::ROTATE => self.block_rotate(),
-                            KeyEvents::PLAY => (),
-                            KeyEvents::PAUSE => {
-                                let mut game_state = state.lock().unwrap();
-                                *game_state = GameStates::PAUSE;
-                                self.state = GameStates::PAUSE;
-                            }
-                        };
-                    }
+                    Ok(GameEvents::KEY(key)) => match key {
+                        KeyEvents::QUIT => break,
+                        KeyEvents::LEFT => self.block_left(),
+                        KeyEvents::RIGHT => self.block_right(),
+                        KeyEvents::DOWN => self.block_down(),
+                        KeyEvents::ROTATE => self.block_rotate(),
+                        KeyEvents::PLAY => (),
+                        KeyEvents::PAUSE => {
+                            let mut game_state = state.lock().unwrap();
+                            *game_state = GameStates::PAUSE;
+                            self.state = GameStates::PAUSE;
+                        }
+                    },
+
                     Ok(GameEvents::TICK) => {
                         if Err(()) == self.tick() {
                             break;
