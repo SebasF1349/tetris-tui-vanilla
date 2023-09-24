@@ -625,8 +625,8 @@ Q => Quit\n\r"
     fn is_end(&self) -> bool {
         self.board
             .iter()
+            .skip(4)
             .rev()
-            .skip(self.rows - 4)
             .any(|val| val.iter().any(|sq| *sq != Square::EMPTY))
     }
 }
