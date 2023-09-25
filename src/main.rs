@@ -350,31 +350,21 @@ impl Display for Tetris {
                 format!("\u{2590}{}\u{258C}", ret.join(""))
             })
             .collect();
-        if self.state == GameStates::PAUSE {
-            write!(
-                f,
-                "{}\n\r{}\n\r\n\rPoints: {}\n\r\n\rGAME PAUSED",
-                output.join("\n\r"),
-                "\u{2594}".repeat(self.cols * 2 + 2),
-                self.points
-            )
+        let extra = if self.state == GameStates::PAUSE {
+            "GAME PAUSED\n\r".to_string() + &" ".repeat(31)
         } else if self.state == GameStates::END_SCREEN {
-            write!(
-                f,
-                "{}\n\r{}\n\r\n\rPoints: {}\n\r\n\rYOU LOST!\n\rPress p to restart or q to quit",
-                output.join("\n\r"),
-                "\u{2594}".repeat(self.cols * 2 + 2),
-                self.points
-            )
+            "YOU LOST!  \n\rPress p to restart or q to quit".to_string()
         } else {
-            write!(
-                f,
-                "{}\n\r{}\n\r\n\rPoints: {}",
-                output.join("\n\r"),
-                "\u{2594}".repeat(self.cols * 2 + 2),
-                self.points
-            )
-        }
+            " ".repeat(11).to_string() + "\n\r" + &" ".repeat(31)
+        };
+        write!(
+            f,
+            "{}\n\r{}\n\r\n\rPoints: {}\n\r\n\r{}",
+            output.join("\n\r"),
+            "\u{2594}".repeat(self.cols * 2 + 2),
+            self.points,
+            extra
+        )
     }
 }
 
@@ -429,6 +419,8 @@ impl Tetris {
                 GameStates::MENU => match rx.recv() {
                     Ok(GameEvents::KEY(key)) => match key {
                         KeyEvents::PLAY => {
+                            clear_screen();
+                            hide_cursor();
                             let mut game_state = state.lock().unwrap();
                             *game_state = GameStates::PLAYING;
                             self.state = GameStates::PLAYING;
@@ -566,17 +558,17 @@ impl Tetris {
 
     fn start(&mut self) {
         self.block = Block::new(self.cols);
-        execute!(stdout(), Clear(ClearType::All), cursor::MoveTo(0, 0)).unwrap();
+        execute!(stdout(), cursor::MoveTo(0, 0)).unwrap();
         println!("{}", self);
     }
 
     fn draw_board(&self) {
-        execute!(stdout(), Clear(ClearType::All), cursor::MoveTo(0, 0)).unwrap();
+        execute!(stdout(), cursor::MoveTo(0, 0)).unwrap();
         println!("{}", self);
     }
 
     fn draw_menu(&self) {
-        execute!(stdout(), Clear(ClearType::All), cursor::MoveTo(0, 0)).unwrap();
+        execute!(stdout(), cursor::MoveTo(0, 0)).unwrap();
         println!(
             "TETRIS\n\r
 
@@ -665,7 +657,7 @@ fn get_input(stdin: &mut std::io::Stdin) -> Option<KeyEvents> {
     }
 }
 
-/*fn hide_cursor() {
+fn hide_cursor() {
     print!("\x1B[?25l");
 }
 
@@ -680,7 +672,6 @@ fn clear_screen() {
 fn move_cursor(row: usize, col: usize) {
     print!("\x1B[{0};{1}H", row, col);
 }
-*/
 
 // tests are failing after adding pieces
 /*#[cfg(test)]
