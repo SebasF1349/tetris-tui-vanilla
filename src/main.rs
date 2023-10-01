@@ -33,8 +33,7 @@ fn main() -> std::io::Result<()> {
         cursor::MoveTo(0, 0)
     )?;
 
-    let mut tetris = Tetris::new(10, 23);
-    tetris.play();
+    Tetris::new(10, 23).play();
 
     execute!(
         stdout,
