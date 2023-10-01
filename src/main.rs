@@ -51,6 +51,15 @@ struct Coordinates {
     col: usize,
 }
 
+impl Coordinates {
+    fn new(coor: [usize; 2]) -> Coordinates {
+        Coordinates {
+            row: coor[0],
+            col: coor[1],
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Block {
     position: [[usize; 2]; 4],
@@ -62,10 +71,7 @@ struct Block {
 impl Block {
     fn new(width: usize) -> Block {
         let color: Color = rand::random();
-        let coor = Coordinates {
-            row: 4,
-            col: width / 2,
-        };
+        let coor = Coordinates::new([4, width / 2]);
         let piece: Piece = rand::random();
         let rotation_pos = rand::thread_rng().gen_range(0..4);
         let position = get_piece_position(piece, rotation_pos, coor).unwrap();
@@ -99,14 +105,8 @@ impl Block {
 
     fn rotate(&mut self) {
         let rotation_pos = (self.rotation_pos + 1) % 4;
-        let position = get_piece_position(
-            self.piece,
-            rotation_pos,
-            Coordinates {
-                row: self.position[0][0],
-                col: self.position[0][1],
-            },
-        );
+        let position =
+            get_piece_position(self.piece, rotation_pos, Coordinates::new(self.position[0]));
         if let Ok(pos) = position {
             self.rotation_pos = rotation_pos;
             self.position = pos;
@@ -598,12 +598,7 @@ Q => Quit\n\r"
 
     fn is_collision(&self, block: &Block) -> bool {
         block.position.into_iter().any(|sq| {
-            sq[1] >= self.cols
-                || sq[0] >= self.rows
-                || self.is_occupied(Coordinates {
-                    row: sq[0],
-                    col: sq[1],
-                })
+            sq[1] >= self.cols || sq[0] >= self.rows || self.is_occupied(Coordinates::new(sq))
         })
     }
 
