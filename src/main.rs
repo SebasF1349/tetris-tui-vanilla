@@ -78,17 +78,23 @@ impl Block {
     }
 
     fn down(&mut self) {
-        self.position = self.position.map(|sq| [sq[0] + 1, sq[1]]);
+        for pos in self.position.iter_mut() {
+            pos[0] = pos[0] + 1
+        }
     }
 
     fn left(&mut self) {
         if self.position.into_iter().all(|sq| sq[1] > 0) {
-            self.position = self.position.map(|sq| [sq[0], sq[1] - 1]);
+            for pos in self.position.iter_mut() {
+                pos[1] = pos[1] - 1
+            }
         }
     }
 
     fn right(&mut self) {
-        self.position = self.position.map(|sq| [sq[0], sq[1] + 1]);
+        for pos in self.position.iter_mut() {
+            pos[1] = pos[1] + 1
+        }
     }
 
     fn rotate(&mut self) {
