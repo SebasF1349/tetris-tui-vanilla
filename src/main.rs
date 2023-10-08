@@ -141,17 +141,17 @@ impl Distribution<Piece> for Standard {
 
 fn get_piece_position(piece: Piece, pos: usize, coor: Coordinates) -> Result<[[usize; 2]; 4], ()> {
     match (piece, pos) {
-        (Piece::I, p) if p % 2 == 0 && coor.col > 0 => Ok([
-            [coor.row, coor.col],
-            [coor.row, coor.col + 1],
-            [coor.row, coor.col + 2],
-            [coor.row, coor.col - 1],
-        ]),
         (Piece::I, p) if p % 2 == 1 => Ok([
             [coor.row, coor.col],
             [coor.row - 1, coor.col],
             [coor.row - 2, coor.col],
             [coor.row + 1, coor.col],
+        ]),
+        (Piece::I, _) if coor.col > 0 => Ok([
+            [coor.row, coor.col],
+            [coor.row, coor.col + 1],
+            [coor.row, coor.col + 2],
+            [coor.row, coor.col - 1],
         ]),
         (Piece::J, 0) if coor.col > 0 => Ok([
             [coor.row, coor.col],
@@ -225,29 +225,29 @@ fn get_piece_position(piece: Piece, pos: usize, coor: Coordinates) -> Result<[[u
             [coor.row + 1, coor.col],
             [coor.row, coor.col + 1],
         ]),
-        (Piece::S, p) if p % 2 == 0 && coor.col > 0 => Ok([
-            [coor.row, coor.col],
-            [coor.row, coor.col - 1],
-            [coor.row - 1, coor.col],
-            [coor.row - 1, coor.col + 1],
-        ]),
         (Piece::S, p) if p % 2 == 1 => Ok([
             [coor.row, coor.col],
             [coor.row - 1, coor.col],
             [coor.row, coor.col + 1],
             [coor.row + 1, coor.col + 1],
         ]),
-        (Piece::Z, p) if p % 2 == 0 && coor.col > 0 => Ok([
+        (Piece::S, _) if coor.col > 0 => Ok([
             [coor.row, coor.col],
             [coor.row, coor.col - 1],
-            [coor.row + 1, coor.col],
-            [coor.row + 1, coor.col + 1],
+            [coor.row - 1, coor.col],
+            [coor.row - 1, coor.col + 1],
         ]),
         (Piece::Z, p) if p % 2 == 1 => Ok([
             [coor.row, coor.col],
             [coor.row + 1, coor.col],
             [coor.row, coor.col + 1],
             [coor.row - 1, coor.col + 1],
+        ]),
+        (Piece::Z, _) if coor.col > 0 => Ok([
+            [coor.row, coor.col],
+            [coor.row, coor.col - 1],
+            [coor.row + 1, coor.col],
+            [coor.row + 1, coor.col + 1],
         ]),
         (Piece::O, _) => Ok([
             [coor.row, coor.col],
