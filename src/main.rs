@@ -661,17 +661,17 @@ fn hide_cursor() {
     print!("\x1B[?25l");
 }
 
-fn show_cursor() {
+/* fn show_cursor() {
     print!("\x1B[?25h");
-}
+} */
 
 fn clear_screen() {
     print!("\x1Bc");
 }
 
-fn move_cursor(row: usize, col: usize) {
+/* fn move_cursor(row: usize, col: usize) {
     print!("\x1B[{0};{1}H", row, col);
-}
+} */
 
 // tests are failing after adding pieces
 /*#[cfg(test)]
