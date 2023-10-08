@@ -355,12 +355,12 @@ impl Display for Tetris {
                 format!("\u{2590}{}\u{258C}", ret.join(""))
             })
             .collect();
-        let extra = if self.state == GameStates::Pause {
-            "GAME PAUSED\n\r".to_string() + &" ".repeat(31)
-        } else if self.state == GameStates::EndScreen {
-            "YOU LOST!  \n\rPress p to restart or q to quit".to_string()
-        } else {
-            " ".repeat(11).to_string() + "\n\r" + &" ".repeat(31)
+        let extra = match self.state {
+            GameStates::Pause => "GAME PAUSED\n\r".to_string() + &" ".repeat(31),
+            GameStates::EndScreen => "YOU LOST!  \n\rPress p to restart or q to quit".to_string(),
+            GameStates::Playing | GameStates::Menu => {
+                " ".repeat(11).to_string() + "\n\r" + &" ".repeat(31)
+            }
         };
         write!(
             f,
