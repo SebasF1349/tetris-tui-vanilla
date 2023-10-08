@@ -306,7 +306,7 @@ impl ToString for Square {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum GameStates {
+enum GameState {
     Playing,
     Pause,
     Menu,
@@ -314,13 +314,13 @@ enum GameStates {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum GameEvents {
+enum GameEvent {
     Tick,
-    Key(KeyEvents),
+    Key(KeyEvent),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-enum KeyEvents {
+enum KeyEvent {
     Down,
     Left,
     Right,
@@ -337,7 +337,7 @@ struct Tetris {
     board: Vec<Vec<Square>>,
     block: Block,
     points: usize,
-    state: GameStates,
+    state: GameState,
 }
 
 impl Display for Tetris {
@@ -356,9 +356,9 @@ impl Display for Tetris {
             })
             .collect();
         let extra = match self.state {
-            GameStates::Pause => "GAME PAUSED\n\r".to_string() + &" ".repeat(31),
-            GameStates::EndScreen => "YOU LOST!  \n\rPress p to restart or q to quit".to_string(),
-            GameStates::Playing | GameStates::Menu => {
+            GameState::Pause => "GAME PAUSED\n\r".to_string() + &" ".repeat(31),
+            GameState::EndScreen => "YOU LOST!  \n\rPress p to restart or q to quit".to_string(),
+            GameState::Playing | GameState::Menu => {
                 " ".repeat(11).to_string() + "\n\r" + &" ".repeat(31)
             }
         };
@@ -381,14 +381,14 @@ impl Tetris {
             board: vec![vec![Square::Empty; cols]; rows],
             block: Block::new(cols),
             points: 0,
-            state: GameStates::Menu,
+            state: GameState::Menu,
         }
     }
 
     fn play(&mut self) {
         let (tx, rx) = mpsc::channel();
 
-        let state = Arc::new(Mutex::new(GameStates::Playing));
+        let state = Arc::new(Mutex::new(GameState::Playing));
 
         {
             let tx = tx.clone();
@@ -396,8 +396,8 @@ impl Tetris {
             thread::spawn(move || loop {
                 thread::sleep(Duration::from_millis(1000));
                 let game_state = state.lock().unwrap();
-                if *game_state == GameStates::Playing {
-                    tx.send(GameEvents::Tick).unwrap();
+                if *game_state == GameState::Playing {
+                    tx.send(GameEvent::Tick).unwrap();
                 }
             });
         }
@@ -410,7 +410,7 @@ impl Tetris {
 
                     loop {
                         match get_input(stdin) {
-                            Some(k) => tx.send(GameEvents::Key(k)).unwrap(),
+                            Some(k) => tx.send(GameEvent::Key(k)).unwrap(),
                             None => (),
                         }
                     }
@@ -421,76 +421,76 @@ impl Tetris {
         self.draw_menu();
         loop {
             match self.state {
-                GameStates::Menu => match rx.recv() {
-                    Ok(GameEvents::Key(key)) => match key {
-                        KeyEvents::Play => {
+                GameState::Menu => match rx.recv() {
+                    Ok(GameEvent::Key(key)) => match key {
+                        KeyEvent::Play => {
                             clear_screen();
                             hide_cursor();
                             let mut game_state = state.lock().unwrap();
-                            *game_state = GameStates::Playing;
-                            self.state = GameStates::Playing;
+                            *game_state = GameState::Playing;
+                            self.state = GameState::Playing;
                             self.start();
                         }
-                        KeyEvents::Quit => break,
+                        KeyEvent::Quit => break,
                         _ => (),
                     },
-                    Ok(GameEvents::Tick) => (),
+                    Ok(GameEvent::Tick) => (),
                     Err(err) => panic!("{}", err),
                 },
-                GameStates::Playing => match rx.recv() {
-                    Ok(GameEvents::Key(key)) => match key {
-                        KeyEvents::Quit => break,
-                        KeyEvents::Left => self.block_left(),
-                        KeyEvents::Right => self.block_right(),
-                        KeyEvents::Down => self.block_down(),
-                        KeyEvents::Rotate => self.block_rotate(),
-                        KeyEvents::Play => (),
-                        KeyEvents::Pause => {
+                GameState::Playing => match rx.recv() {
+                    Ok(GameEvent::Key(key)) => match key {
+                        KeyEvent::Quit => break,
+                        KeyEvent::Left => self.block_left(),
+                        KeyEvent::Right => self.block_right(),
+                        KeyEvent::Down => self.block_down(),
+                        KeyEvent::Rotate => self.block_rotate(),
+                        KeyEvent::Play => (),
+                        KeyEvent::Pause => {
                             let mut game_state = state.lock().unwrap();
-                            *game_state = GameStates::Pause;
-                            self.state = GameStates::Pause;
+                            *game_state = GameState::Pause;
+                            self.state = GameState::Pause;
                             self.draw_board();
                         }
                     },
-                    Ok(GameEvents::Tick) => {
+                    Ok(GameEvent::Tick) => {
                         if Err(()) == self.tick() {
-                            self.state = GameStates::EndScreen;
+                            self.state = GameState::EndScreen;
                             self.draw_board();
                         }
                     }
                     Err(err) => panic!("{}", err),
                 },
-                GameStates::Pause => match rx.recv() {
-                    Ok(GameEvents::Key(key)) => {
+                GameState::Pause => match rx.recv() {
+                    Ok(GameEvent::Key(key)) => {
                         match key {
-                            KeyEvents::Quit => break,
-                            KeyEvents::Pause => {
+                            KeyEvent::Quit => break,
+                            KeyEvent::Pause => {
                                 let mut game_state = state.lock().unwrap();
-                                *game_state = GameStates::Playing;
-                                self.state = GameStates::Playing;
+                                *game_state = GameState::Playing;
+                                self.state = GameState::Playing;
                                 self.draw_board();
                             }
                             _ => (),
                         };
                     }
-                    Ok(GameEvents::Tick) => (),
+                    Ok(GameEvent::Tick) => (),
                     Err(err) => panic!("{}", err),
                 },
-                GameStates::EndScreen => match rx.recv() {
-                    Ok(GameEvents::Key(key)) => {
+                GameState::EndScreen => match rx.recv() {
+                    Ok(GameEvent::Key(key)) => {
                         match key {
-                            KeyEvents::Quit => break,
-                            KeyEvents::Play => {
+                            KeyEvent::Quit => break,
+                            KeyEvent::Play => {
                                 *self = Tetris::new(10, 23);
                                 let mut game_state = state.lock().unwrap();
-                                *game_state = GameStates::Playing;
-                                self.state = GameStates::Playing;
+                                *game_state = GameState::Playing;
+                                self.state = GameState::Playing;
                                 self.start();
                             }
                             _ => (),
                         };
                     }
-                    Ok(GameEvents::Tick) => (),
+                    Ok(GameEvent::Tick) => (),
                     Err(err) => panic!("{}", err),
                 },
             }
@@ -623,27 +623,27 @@ Q => Quit\n\r"
     }
 }
 
-fn get_input(stdin: &mut std::io::Stdin) -> Option<KeyEvents> {
+fn get_input(stdin: &mut std::io::Stdin) -> Option<KeyEvent> {
     use std::io::Read;
 
     let c = &mut [0u8];
     match stdin.read(c) {
         Ok(_) => match std::str::from_utf8(c) {
-            Ok("w") => Some(KeyEvents::Rotate),
-            Ok("s") => Some(KeyEvents::Down),
-            Ok("a") => Some(KeyEvents::Left),
-            Ok("d") => Some(KeyEvents::Right),
-            Ok("q") => Some(KeyEvents::Quit),
-            Ok("p") => Some(KeyEvents::Play),
-            Ok(" ") => Some(KeyEvents::Pause),
+            Ok("w") => Some(KeyEvent::Rotate),
+            Ok("s") => Some(KeyEvent::Down),
+            Ok("a") => Some(KeyEvent::Left),
+            Ok("d") => Some(KeyEvent::Right),
+            Ok("q") => Some(KeyEvent::Quit),
+            Ok("p") => Some(KeyEvent::Play),
+            Ok(" ") => Some(KeyEvent::Pause),
             Ok("\x1b") => {
                 let code = &mut [0u8; 2];
                 match stdin.read(code) {
                     Ok(_) => match std::str::from_utf8(code) {
-                        Ok("[A") => Some(KeyEvents::Rotate),
-                        Ok("[B") => Some(KeyEvents::Down),
-                        Ok("[C") => Some(KeyEvents::Right),
-                        Ok("[D") => Some(KeyEvents::Left),
+                        Ok("[A") => Some(KeyEvent::Rotate),
+                        Ok("[B") => Some(KeyEvent::Down),
+                        Ok("[C") => Some(KeyEvent::Right),
+                        Ok("[D") => Some(KeyEvent::Left),
                         _ => None,
                     },
                     Err(msg) => {
