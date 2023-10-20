@@ -460,8 +460,13 @@ impl Tetris {
                 GameState::Menu => match rx.recv() {
                     Ok(GameEvent::Key(key)) => match key {
                         KeyEvent::Play => {
-                            clear_screen();
-                            hide_cursor();
+                            execute!(
+                                stdout(),
+                                cursor::Hide,
+                                Clear(ClearType::All),
+                                cursor::MoveTo(0, 0)
+                            )
+                            .unwrap();
                             let mut game_state = state.lock().unwrap();
                             *game_state = GameState::Playing;
                             self.state = GameState::Playing;
@@ -694,17 +699,17 @@ fn get_input(stdin: &mut std::io::Stdin) -> Option<KeyEvent> {
     }
 }
 
-fn hide_cursor() {
+/* fn hide_cursor() {
     print!("\x1B[?25l");
-}
+} */
 
 /* fn show_cursor() {
     print!("\x1B[?25h");
 } */
 
-fn clear_screen() {
+/* fn clear_screen() {
     print!("\x1Bc");
-}
+} */
 
 /* fn move_cursor(row: usize, col: usize) {
     print!("\x1B[{0};{1}H", row, col);
