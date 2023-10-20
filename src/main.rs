@@ -33,7 +33,7 @@ fn main() -> std::io::Result<()> {
         cursor::MoveTo(0, 0)
     )?;
 
-    Tetris::new(10, 23).play();
+    Tetris::new().play();
 
     execute!(
         stdout,
@@ -94,9 +94,9 @@ struct Block {
 }
 
 impl Block {
-    fn new(width: usize) -> Block {
+    fn new() -> Block {
         let color: Color = rand::random();
-        let coor = Coordinates::new().row(4).col(width / 2).build();
+        let coor = Coordinates::new().row(4).col(COLS / 2).build();
         let piece: Piece = rand::random();
         let rotation_pos = rand::thread_rng().gen_range(0..4);
         let position = get_piece_position(piece, rotation_pos, coor).unwrap();
@@ -309,7 +309,7 @@ impl Distribution<Color> for Standard {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Copy)]
 enum Square {
     Empty,
     Occupied(Color),
@@ -374,10 +374,11 @@ enum KeyEvent {
     Pause,
 }
 
+const COLS: usize = 10;
+const ROWS: usize = 23;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Tetris {
-    cols: usize,
-    rows: usize,
     board: Vec<Vec<Square>>,
     block: Block,
     points: usize,
@@ -403,7 +404,7 @@ impl Display for Tetris {
             f,
             "{}\n\r{}\n\r\n\rPoints: {}\n\r\n\r{}",
             output.join("\n\r"),
-            "\u{2594}".repeat(self.cols * 2 + 2),
+            "\u{2594}".repeat(COLS * 2 + 2),
             self.points,
             self.state.print_message()
         )
@@ -411,12 +412,10 @@ impl Display for Tetris {
 }
 
 impl Tetris {
-    fn new(cols: usize, rows: usize) -> Tetris {
+    fn new() -> Tetris {
         Tetris {
-            cols,
-            rows,
-            board: vec![vec![Square::Empty; cols]; rows],
-            block: Block::new(cols),
+            board: vec![vec![Square::Empty; COLS]; ROWS],
+            block: Block::new(),
             points: 0,
             state: GameState::Menu,
         }
@@ -518,7 +517,7 @@ impl Tetris {
                         match key {
                             KeyEvent::Quit => break,
                             KeyEvent::Play => {
-                                *self = Tetris::new(10, 23);
+                                *self = Tetris::new();
                                 let mut game_state = state.lock().unwrap();
                                 *game_state = GameState::Playing;
                                 self.state = GameState::Playing;
@@ -550,7 +549,7 @@ impl Tetris {
             if self.is_end() {
                 return Err(());
             }
-            let block = Block::new(self.cols);
+            let block = Block::new();
             if self.is_collision(&block) {
                 return Err(());
             }
@@ -599,7 +598,7 @@ impl Tetris {
     }
 
     fn start(&mut self) {
-        self.block = Block::new(self.cols);
+        self.block = Block::new();
         execute!(stdout(), cursor::MoveTo(0, 0)).unwrap();
         println!("{}", self);
     }
@@ -637,18 +636,18 @@ Q => Quit\n\r"
         block
             .position
             .into_iter()
-            .any(|sq| sq.col >= self.cols || sq.row >= self.rows || self.is_occupied(sq))
+            .any(|sq| sq.col >= COLS || sq.row >= ROWS || self.is_occupied(sq))
     }
 
     fn remove_lines_completed(&mut self) {
         self.board
             .retain(|val| val.iter().any(|sq| *sq == Square::Empty));
         let len = self.board.len();
-        if len < self.rows {
-            let mut v = vec![vec![Square::Empty; self.cols]; self.rows - len];
+        if len < ROWS {
+            let mut v = vec![vec![Square::Empty; COLS]; ROWS - len];
             v.append(&mut self.board);
             self.board = v;
-            self.points += self.rows - len;
+            self.points += ROWS - len;
         }
     }
 
@@ -656,7 +655,7 @@ Q => Quit\n\r"
         self.board
             .iter()
             .rev()
-            .skip(self.rows - 2)
+            .skip(ROWS - 2)
             .any(|val| val.iter().any(|sq| *sq != Square::Empty))
     }
 }
