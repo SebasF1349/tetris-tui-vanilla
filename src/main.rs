@@ -338,6 +338,25 @@ enum GameState {
     EndScreen,
 }
 
+impl GameState {
+    fn print_message(&self) -> String {
+        let message = match self {
+            GameState::Pause => [String::from("GAME PAUSED"), String::from("")],
+            GameState::EndScreen => [
+                String::from("YOU LOST!"),
+                String::from("Press p to restart or q to quit"),
+            ],
+            GameState::Playing | GameState::Menu => [String::from(""), String::from("")],
+        };
+        let longest = "Press p to restart or q to quit".len();
+        message
+            .into_iter()
+            .map(|s| format!("{}{}", s, &" ".repeat(longest - s.len())))
+            .collect::<Vec<String>>()
+            .join("\n\r")
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 enum GameEvent {
     Tick,
@@ -380,20 +399,13 @@ impl Display for Tetris {
                 format!("\u{2590}{}\u{258C}", ret.join(""))
             })
             .collect();
-        let extra = match self.state {
-            GameState::Pause => "GAME PAUSED\n\r".to_string() + &" ".repeat(31),
-            GameState::EndScreen => "YOU LOST!  \n\rPress p to restart or q to quit".to_string(),
-            GameState::Playing | GameState::Menu => {
-                " ".repeat(11).to_string() + "\n\r" + &" ".repeat(31)
-            }
-        };
         write!(
             f,
             "{}\n\r{}\n\r\n\rPoints: {}\n\r\n\r{}",
             output.join("\n\r"),
             "\u{2594}".repeat(self.cols * 2 + 2),
             self.points,
-            extra
+            self.state.print_message()
         )
     }
 }
