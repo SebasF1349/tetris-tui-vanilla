@@ -85,12 +85,37 @@ impl CoordinatesBuilder {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Copy)]
 struct Block {
     position: [Coordinates; 4],
     color: Color,
     piece: Piece,
     rotation_pos: usize,
+}
+
+impl Display for Block {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let coor = get_piece_position(
+            self.piece,
+            self.rotation_pos,
+            Coordinates::new().row(2).col(2).build(),
+        )
+        .unwrap();
+        let mut matrix = [[Square::Empty; 6]; 6];
+        for i in 0..4 {
+            matrix[coor[i].row + 1][coor[i].col + 1] = Square::Occupied(self.color);
+        }
+        let mut output: Vec<String> = matrix
+            .iter_mut()
+            .map(|val| {
+                let ret: Vec<String> = val.iter().map(|num| num.to_string()).collect();
+                ret.join("")
+            })
+            .collect();
+        output.retain(|val| !val.trim().is_empty());
+        output.resize(4, " ".to_string().repeat(12));
+        write!(f, "{}", output.join("\n\r"),)
+    }
 }
 
 impl Block {
@@ -165,13 +190,13 @@ impl Distribution<Piece> for Standard {
 
 fn get_piece_position(piece: Piece, pos: usize, coor: Coordinates) -> Result<[Coordinates; 4], ()> {
     let position = match (piece, pos) {
-        (Piece::I, p) if p % 2 == 1 => Ok([
+        (Piece::I, p) if p % 2 == 1 && coor.row > 1 => Ok([
             [coor.row, coor.col],
             [coor.row - 1, coor.col],
             [coor.row - 2, coor.col],
             [coor.row + 1, coor.col],
         ]),
-        (Piece::I, _) if coor.col > 0 => Ok([
+        (Piece::I, p) if p % 2 == 0 && coor.col > 0 => Ok([
             [coor.row, coor.col],
             [coor.row, coor.col + 1],
             [coor.row, coor.col + 2],
@@ -380,7 +405,8 @@ const ROWS: usize = 23;
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Tetris {
     board: Vec<Vec<Square>>,
-    block: Block,
+    current_block: Block,
+    next_block: Block,
     points: usize,
     state: GameState,
 }
@@ -389,8 +415,8 @@ impl Display for Tetris {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut output = self.board.clone();
         for i in 0..4 {
-            output[self.block.position[i].row][self.block.position[i].col] =
-                Square::Occupied(self.block.color);
+            output[self.current_block.position[i].row][self.current_block.position[i].col] =
+                Square::Occupied(self.current_block.color);
         }
         let output: Vec<String> = output
             .iter_mut()
@@ -402,11 +428,12 @@ impl Display for Tetris {
             .collect();
         write!(
             f,
-            "{}\n\r{}\n\r\n\rPoints: {}\n\r\n\r{}",
+            "{}\n\r{}\n\r\n\rPoints: {}\n\r\n\r{}\n\r{}",
             output.join("\n\r"),
             "\u{2594}".repeat(COLS * 2 + 2),
             self.points,
-            self.state.print_message()
+            self.state.print_message(),
+            self.next_block
         )
     }
 }
@@ -415,7 +442,8 @@ impl Tetris {
     fn new() -> Tetris {
         Tetris {
             board: vec![vec![Square::Empty; COLS]; ROWS],
-            block: Block::new(),
+            current_block: Block::new(),
+            next_block: Block::new(),
             points: 0,
             state: GameState::Menu,
         }
@@ -540,13 +568,13 @@ impl Tetris {
 
     fn add_block(&mut self) {
         for i in 0..4 {
-            self.board[self.block.position[i].row][self.block.position[i].col] =
-                Square::Occupied(self.block.color);
+            self.board[self.current_block.position[i].row][self.current_block.position[i].col] =
+                Square::Occupied(self.current_block.color);
         }
     }
 
     fn tick(&mut self) -> Result<(), ()> {
-        let mut block = self.block.clone();
+        let mut block = self.current_block.clone();
         block.down();
         if self.is_collision(&block) {
             self.add_block();
@@ -554,56 +582,56 @@ impl Tetris {
             if self.is_end() {
                 return Err(());
             }
-            let block = Block::new();
-            if self.is_collision(&block) {
+            if self.is_collision(&self.next_block) {
                 return Err(());
             }
-            self.block = block;
+            self.current_block = self.next_block;
+            self.next_block = Block::new()
         } else {
-            self.block = block;
+            self.current_block = block;
         }
         self.draw_board();
         return Ok(());
     }
 
     fn block_down(&mut self) {
-        let mut block = self.block.clone();
+        let mut block = self.current_block.clone();
         block.down();
         if !self.is_collision(&block) {
-            self.block = block;
+            self.current_block = block;
             self.draw_board();
         }
     }
 
     fn block_left(&mut self) {
-        let mut block = self.block.clone();
+        let mut block = self.current_block.clone();
         block.left();
         if !self.is_collision(&block) {
-            self.block = block;
+            self.current_block = block;
             self.draw_board();
         }
     }
 
     fn block_right(&mut self) {
-        let mut block = self.block.clone();
+        let mut block = self.current_block.clone();
         block.right();
         if !self.is_collision(&block) {
-            self.block = block;
+            self.current_block = block;
             self.draw_board();
         }
     }
 
     fn block_rotate(&mut self) {
-        let mut block = self.block.clone();
+        let mut block = self.current_block.clone();
         block.rotate();
         if !self.is_collision(&block) {
-            self.block = block;
+            self.current_block = block;
             self.draw_board();
         }
     }
 
     fn start(&mut self) {
-        self.block = Block::new();
+        self.current_block = Block::new();
         execute!(stdout(), cursor::MoveTo(0, 0)).unwrap();
         println!("{}", self);
     }
