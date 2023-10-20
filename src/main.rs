@@ -642,12 +642,12 @@ Q => Quit\n\r"
     fn remove_lines_completed(&mut self) {
         self.board
             .retain(|val| val.iter().any(|sq| *sq == Square::Empty));
-        let len = self.board.len();
-        if len < ROWS {
-            let mut v = vec![vec![Square::Empty; COLS]; ROWS - len];
+        let deleted = ROWS - self.board.len();
+        if deleted > 0 {
+            let mut v = vec![vec![Square::Empty; COLS]; deleted];
             v.append(&mut self.board);
             self.board = v;
-            self.points += ROWS - len;
+            self.points += deleted;
         }
     }
 
