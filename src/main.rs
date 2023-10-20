@@ -555,7 +555,7 @@ impl Tetris {
             }
             self.block = block;
         } else {
-            self.block.down();
+            self.block = block;
         }
         self.draw_board();
         return Ok(());
@@ -565,7 +565,7 @@ impl Tetris {
         let mut block = self.block.clone();
         block.down();
         if !self.is_collision(&block) {
-            self.block.down();
+            self.block = block;
             self.draw_board();
         }
     }
@@ -574,7 +574,7 @@ impl Tetris {
         let mut block = self.block.clone();
         block.left();
         if !self.is_collision(&block) {
-            self.block.left();
+            self.block = block;
             self.draw_board();
         }
     }
@@ -583,7 +583,7 @@ impl Tetris {
         let mut block = self.block.clone();
         block.right();
         if !self.is_collision(&block) {
-            self.block.right();
+            self.block = block;
             self.draw_board();
         }
     }
@@ -592,7 +592,7 @@ impl Tetris {
         let mut block = self.block.clone();
         block.rotate();
         if !self.is_collision(&block) {
-            self.block.rotate();
+            self.block = block;
             self.draw_board();
         }
     }
