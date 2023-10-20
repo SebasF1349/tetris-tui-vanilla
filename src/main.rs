@@ -45,24 +45,49 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Copy)]
 struct Coordinates {
     row: usize,
     col: usize,
 }
 
 impl Coordinates {
-    fn new(coor: [usize; 2]) -> Coordinates {
+    fn new() -> CoordinatesBuilder {
+        CoordinatesBuilder::new()
+    }
+}
+
+struct CoordinatesBuilder {
+    row: usize,
+    col: usize,
+}
+
+impl CoordinatesBuilder {
+    fn new() -> CoordinatesBuilder {
+        CoordinatesBuilder { row: 0, col: 0 }
+    }
+
+    fn row(mut self, row: usize) -> CoordinatesBuilder {
+        self.row = row;
+        self
+    }
+
+    fn col(mut self, col: usize) -> CoordinatesBuilder {
+        self.col = col;
+        self
+    }
+
+    fn build(self) -> Coordinates {
         Coordinates {
-            row: coor[0],
-            col: coor[1],
+            row: self.row,
+            col: self.col,
         }
     }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Block {
-    position: [[usize; 2]; 4],
+    position: [Coordinates; 4],
     color: Color,
     piece: Piece,
     rotation_pos: usize,
@@ -71,7 +96,7 @@ struct Block {
 impl Block {
     fn new(width: usize) -> Block {
         let color: Color = rand::random();
-        let coor = Coordinates::new([4, width / 2]);
+        let coor = Coordinates::new().row(4).col(width / 2).build();
         let piece: Piece = rand::random();
         let rotation_pos = rand::thread_rng().gen_range(0..4);
         let position = get_piece_position(piece, rotation_pos, coor).unwrap();
@@ -85,28 +110,27 @@ impl Block {
 
     fn down(&mut self) {
         for pos in self.position.iter_mut() {
-            pos[0] = pos[0] + 1
+            pos.row += 1
         }
     }
 
     fn left(&mut self) {
-        if self.position.into_iter().all(|sq| sq[1] > 0) {
+        if self.position.into_iter().all(|sq| sq.col > 0) {
             for pos in self.position.iter_mut() {
-                pos[1] = pos[1] - 1
+                pos.col -= 1
             }
         }
     }
 
     fn right(&mut self) {
         for pos in self.position.iter_mut() {
-            pos[1] = pos[1] + 1
+            pos.col += 1
         }
     }
 
     fn rotate(&mut self) {
         let rotation_pos = (self.rotation_pos + 1) % 4;
-        let position =
-            get_piece_position(self.piece, rotation_pos, Coordinates::new(self.position[0]));
+        let position = get_piece_position(self.piece, rotation_pos, self.position[0]);
         if let Ok(pos) = position {
             self.rotation_pos = rotation_pos;
             self.position = pos;
@@ -139,8 +163,8 @@ impl Distribution<Piece> for Standard {
     }
 }
 
-fn get_piece_position(piece: Piece, pos: usize, coor: Coordinates) -> Result<[[usize; 2]; 4], ()> {
-    match (piece, pos) {
+fn get_piece_position(piece: Piece, pos: usize, coor: Coordinates) -> Result<[Coordinates; 4], ()> {
+    let position = match (piece, pos) {
         (Piece::I, p) if p % 2 == 1 => Ok([
             [coor.row, coor.col],
             [coor.row - 1, coor.col],
@@ -256,7 +280,8 @@ fn get_piece_position(piece: Piece, pos: usize, coor: Coordinates) -> Result<[[u
             [coor.row - 1, coor.col + 1],
         ]),
         (_, _) => Err(()),
-    }
+    };
+    position.map(|coors| coors.map(|coor| Coordinates::new().row(coor[0]).col(coor[1]).build()))
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
@@ -344,7 +369,7 @@ impl Display for Tetris {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut output = self.board.clone();
         for i in 0..4 {
-            output[self.block.position[i][0]][self.block.position[i][1]] =
+            output[self.block.position[i].row][self.block.position[i].col] =
                 Square::Occupied(self.block.color);
         }
         let output: Vec<String> = output
@@ -499,7 +524,7 @@ impl Tetris {
 
     fn add_block(&mut self) {
         for i in 0..4 {
-            self.board[self.block.position[i][0]][self.block.position[i][1]] =
+            self.board[self.block.position[i].row][self.block.position[i].col] =
                 Square::Occupied(self.block.color);
         }
     }
@@ -597,9 +622,10 @@ Q => Quit\n\r"
     }
 
     fn is_collision(&self, block: &Block) -> bool {
-        block.position.into_iter().any(|sq| {
-            sq[1] >= self.cols || sq[0] >= self.rows || self.is_occupied(Coordinates::new(sq))
-        })
+        block
+            .position
+            .into_iter()
+            .any(|sq| sq.col >= self.cols || sq.row >= self.rows || self.is_occupied(sq))
     }
 
     fn remove_lines_completed(&mut self) {
