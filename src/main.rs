@@ -93,31 +93,6 @@ struct Block {
     rotation_pos: usize,
 }
 
-impl Display for Block {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let coor = get_piece_position(
-            self.piece,
-            self.rotation_pos,
-            Coordinates::new().row(2).col(2).build(),
-        )
-        .unwrap();
-        let mut matrix = [[Square::Empty; 6]; 6];
-        for i in 0..4 {
-            matrix[coor[i].row + 1][coor[i].col + 1] = Square::Occupied(self.color);
-        }
-        let mut output: Vec<String> = matrix
-            .iter_mut()
-            .map(|val| {
-                let ret: Vec<String> = val.iter().map(|num| num.to_string()).collect();
-                ret.join("")
-            })
-            .collect();
-        output.retain(|val| !val.trim().is_empty());
-        output.resize(4, " ".to_string().repeat(12));
-        write!(f, "{}", output.join("\n\r"),)
-    }
-}
-
 impl Block {
     fn new() -> Block {
         let color: Color = rand::random();
@@ -160,6 +135,29 @@ impl Block {
             self.rotation_pos = rotation_pos;
             self.position = pos;
         }
+    }
+
+    fn display(&self) -> Vec<String> {
+        let coor = get_piece_position(
+            self.piece,
+            self.rotation_pos,
+            Coordinates::new().row(2).col(2).build(),
+        )
+        .unwrap();
+        let mut matrix = [[Square::Empty; 6]; 6];
+        for i in 0..4 {
+            matrix[coor[i].row + 1][coor[i].col + 1] = Square::Occupied(self.color);
+        }
+        let mut output: Vec<String> = matrix
+            .iter_mut()
+            .map(|val| {
+                let ret: Vec<String> = val.iter().map(|num| num.to_string()).collect();
+                ret.join("")
+            })
+            .collect();
+        output.retain(|val| !val.trim().is_empty());
+        output.resize(4, " ".to_string().repeat(12));
+        output
     }
 }
 
@@ -364,7 +362,7 @@ enum GameState {
 }
 
 impl GameState {
-    fn print_message(&self) -> String {
+    fn print_message(&self) -> Vec<String> {
         let message = match self {
             GameState::Pause => [String::from("GAME PAUSED"), String::from("")],
             GameState::EndScreen => [
@@ -378,7 +376,6 @@ impl GameState {
             .into_iter()
             .map(|s| format!("{}{}", s, &" ".repeat(longest - s.len())))
             .collect::<Vec<String>>()
-            .join("\n\r")
     }
 }
 
@@ -418,22 +415,31 @@ impl Display for Tetris {
             output[self.current_block.position[i].row][self.current_block.position[i].col] =
                 Square::Occupied(self.current_block.color);
         }
+        let next = self.next_block.display();
         let output: Vec<String> = output
             .iter_mut()
             .skip(4)
-            .map(|val| {
+            .enumerate()
+            .map(|(row, val)| {
                 let ret: Vec<String> = val.iter().map(|num| num.to_string()).collect();
-                format!("\u{2590}{}\u{258C}", ret.join(""))
+                let right_menu = match row {
+                    5 => format!("    Points: {} ", &self.points.to_string()),
+                    7 => format!("    {} ", &self.state.print_message()[0]),
+                    8 => format!("    {} ", &self.state.print_message()[1]),
+                    10 => format!("{}", &next[0]),
+                    11 => format!("{}", &next[1]),
+                    12 => format!("{}", &next[2]),
+                    13 => format!("{}", &next[3]),
+                    _ => format!(""),
+                };
+                format!("\u{2590}{}\u{258C}{}", ret.join(""), right_menu)
             })
             .collect();
         write!(
             f,
-            "{}\n\r{}\n\r\n\rPoints: {}\n\r\n\r{}\n\r{}",
+            "{}\n\r{}",
             output.join("\n\r"),
             "\u{2594}".repeat(COLS * 2 + 2),
-            self.points,
-            self.state.print_message(),
-            self.next_block
         )
     }
 }
