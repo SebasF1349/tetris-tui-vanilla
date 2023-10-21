@@ -683,9 +683,8 @@ Q => Quit\n\r"
             .retain(|val| val.iter().any(|sq| *sq == Square::Empty));
         let deleted = ROWS - self.board.len();
         if deleted > 0 {
-            let mut v = vec![vec![Square::Empty; COLS]; deleted];
-            v.append(&mut self.board);
-            self.board = v;
+            self.board
+                .splice(0..0, vec![vec![Square::Empty; COLS]; deleted]);
             self.points += deleted;
         }
     }
