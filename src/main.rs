@@ -572,7 +572,7 @@ impl Tetris {
         }
     }
 
-    fn add_block(&mut self) {
+    fn add_current_block(&mut self) {
         for i in 0..4 {
             self.board[self.current_block.position[i].row][self.current_block.position[i].col] =
                 Square::Occupied(self.current_block.color);
@@ -580,10 +580,8 @@ impl Tetris {
     }
 
     fn tick(&mut self) -> Result<(), ()> {
-        let mut block = self.current_block.clone();
-        block.down();
-        if self.is_collision(&block) {
-            self.add_block();
+        if !self.can_block_move(&self.current_block, KeyEvent::Down) {
+            self.add_current_block();
             self.remove_lines_completed();
             if self.is_end() {
                 return Err(());
@@ -592,37 +590,31 @@ impl Tetris {
                 return Err(());
             }
             self.current_block = self.next_block;
-            self.next_block = Block::new()
+            self.next_block = Block::new();
         } else {
-            self.current_block = block;
+            self.current_block.down();
         }
         self.draw_board();
         return Ok(());
     }
 
     fn block_down(&mut self) {
-        let mut block = self.current_block.clone();
-        block.down();
-        if !self.is_collision(&block) {
-            self.current_block = block;
+        if self.can_block_move(&self.current_block, KeyEvent::Down) {
+            self.current_block.down();
             self.draw_board();
         }
     }
 
     fn block_left(&mut self) {
-        let mut block = self.current_block.clone();
-        block.left();
-        if !self.is_collision(&block) {
-            self.current_block = block;
+        if self.can_block_move(&self.current_block, KeyEvent::Left) {
+            self.current_block.left();
             self.draw_board();
         }
     }
 
     fn block_right(&mut self) {
-        let mut block = self.current_block.clone();
-        block.right();
-        if !self.is_collision(&block) {
-            self.current_block = block;
+        if self.can_block_move(&self.current_block, KeyEvent::Right) {
+            self.current_block.right();
             self.draw_board();
         }
     }
@@ -634,6 +626,23 @@ impl Tetris {
             self.current_block = block;
             self.draw_board();
         }
+    }
+
+    fn can_block_move(&self, block: &Block, movement: KeyEvent) -> bool {
+        block.position.into_iter().all(|sq| {
+            let sq = match movement {
+                KeyEvent::Down => Coordinates::new().row(sq.row + 1).col(sq.col).build(),
+                KeyEvent::Right => Coordinates::new().row(sq.row).col(sq.col + 1).build(),
+                KeyEvent::Left => {
+                    if sq.col == 0 {
+                        return false;
+                    }
+                    Coordinates::new().row(sq.row).col(sq.col - 1).build()
+                }
+                _ => return false,
+            };
+            sq.col < COLS && sq.row < ROWS && !self.is_occupied(sq)
+        })
     }
 
     fn start(&mut self) {
