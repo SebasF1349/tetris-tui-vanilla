@@ -77,6 +77,28 @@ impl CoordinatesBuilder {
         self
     }
 
+    fn sub_row(mut self, num: i32) -> Result<CoordinatesBuilder, ()> {
+        let Ok(_num) = usize::try_from(num) else {
+            return Err(());
+        };
+        let Some(_num) = self.row.checked_sub(_num) else {
+            return Err(());
+        };
+        self.row = _num;
+        Ok(self)
+    }
+
+    fn sub_col(mut self, num: i32) -> Result<CoordinatesBuilder, ()> {
+        let Ok(_num) = usize::try_from(num) else {
+            return Err(());
+        };
+        let Some(_num) = self.col.checked_sub(_num) else {
+            return Err(());
+        };
+        self.col = _num;
+        Ok(self)
+    }
+
     fn build(self) -> Coordinates {
         Coordinates {
             row: self.row,
@@ -96,7 +118,7 @@ struct Block {
 impl Block {
     fn new() -> Block {
         let color: Color = rand::random();
-        let coor = Coordinates::new().row(4).col(COLS / 2).build();
+        let coor = Coordinates::new().row(3).col(COLS / 2).build();
         let piece: Piece = rand::random();
         let rotation_pos = rand::thread_rng().gen_range(0..4);
         let position = get_piece_position(piece, rotation_pos, coor).unwrap();
@@ -629,20 +651,25 @@ impl Tetris {
     }
 
     fn can_block_move(&self, block: &Block, movement: KeyEvent) -> bool {
-        block.position.into_iter().all(|sq| {
-            let sq = match movement {
-                KeyEvent::Down => Coordinates::new().row(sq.row + 1).col(sq.col).build(),
-                KeyEvent::Right => Coordinates::new().row(sq.row).col(sq.col + 1).build(),
-                KeyEvent::Left => {
-                    if sq.col == 0 {
-                        return false;
-                    }
-                    Coordinates::new().row(sq.row).col(sq.col - 1).build()
-                }
-                _ => return false,
-            };
-            sq.col < COLS && sq.row < ROWS && !self.is_occupied(sq)
-        })
+        block
+            .position
+            .into_iter()
+            .map(|sq| match movement {
+                KeyEvent::Down => Ok(Coordinates::new().row(sq.row + 1).col(sq.col).build()),
+                KeyEvent::Right => Ok(Coordinates::new().row(sq.row).col(sq.col + 1).build()),
+                KeyEvent::Left => Ok(Coordinates::new()
+                    .row(sq.row)
+                    .col(sq.col)
+                    .sub_col(1)?
+                    .build()),
+                _ => Err(()),
+            })
+            .all(|sq| {
+                sq.is_ok()
+                    && sq.unwrap().col < COLS
+                    && sq.unwrap().row < ROWS
+                    && !self.is_occupied(sq.unwrap())
+            })
     }
 
     fn start(&mut self) {
