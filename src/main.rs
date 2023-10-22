@@ -751,26 +751,65 @@ fn get_input(stdin: &mut std::io::Stdin) -> Option<KeyEvent> {
     print!("\x1B[{0};{1}H", row, col);
 } */
 
-// tests are failing after adding pieces
-/*#[cfg(test)]
+#[cfg(test)]
 mod tests {
     use super::*;
 
+    fn create_block(col: usize, row: usize) -> Block {
+        Block {
+            position: [
+                Coordinates { row, col },
+                Coordinates { row, col },
+                Coordinates { row, col },
+                Coordinates { row, col },
+            ],
+            color: Color::Red,
+            piece: Piece::I,
+            rotation_pos: 1,
+        }
+    }
+
+    fn create_tetris(col: usize, row: usize) -> Tetris {
+        let block = create_block(col, row);
+
+        let board = vec![
+            vec![
+                Square::Empty,
+                Square::Empty,
+                Square::Empty,
+                Square::Occupied(Color::Blue),
+                Square::Occupied(Color::Blue),
+                Square::Occupied(Color::Blue),
+                Square::Occupied(Color::Blue),
+                Square::Empty,
+                Square::Empty,
+                Square::Empty
+            ];
+            ROWS
+        ];
+
+        Tetris {
+            board,
+            current_block: block,
+            next_block: block,
+            points: 1,
+            state: GameState::Playing,
+        }
+    }
+
     #[test]
     fn test_add_block() {
-        let mut tetris = Tetris::new(10, 10);
-        tetris.add_block(3, 4);
-        assert_eq!(tetris.block, Block::new());
-        assert_eq!(tetris.board[0][0], Square::OCCUPIED(tetris.block.color));
+        let mut tetris = create_tetris(8, 8);
+        assert!(!tetris.is_occupied(Coordinates::new(8, 8)));
+        tetris.add_current_block();
+        assert!(tetris.is_occupied(Coordinates::new(8, 8)));
     }
 
     #[test]
     fn test_collision() {
-        let mut tetris = Tetris::new(10, 10);
-        tetris.board[2][3] = Square::OCCUPIED(tetris.block.color);
-        let color: Color = rand::random();
-        let piece = get_random_piece(2, 3);
-        let block = Block { color, piece };
-        assert!(tetris.is_collision(&block));
+        let tetris = create_tetris(8, 8);
+        assert!(tetris.is_collision(&create_block(3, 5)));
+        assert!(!tetris.is_collision(&create_block(2, 5)));
+        assert!(tetris.is_collision(&create_block(10, 5)));
     }
-}*/
+}
