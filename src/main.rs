@@ -52,32 +52,11 @@ struct Coordinates {
 }
 
 impl Coordinates {
-    fn new() -> CoordinatesBuilder {
-        CoordinatesBuilder::new()
-    }
-}
-
-struct CoordinatesBuilder {
-    row: usize,
-    col: usize,
-}
-
-impl CoordinatesBuilder {
-    fn new() -> CoordinatesBuilder {
-        CoordinatesBuilder { row: 0, col: 0 }
+    fn new(row: usize, col: usize) -> Coordinates {
+        Coordinates { row, col }
     }
 
-    fn row(mut self, row: usize) -> CoordinatesBuilder {
-        self.row = row;
-        self
-    }
-
-    fn col(mut self, col: usize) -> CoordinatesBuilder {
-        self.col = col;
-        self
-    }
-
-    fn sub_row(mut self, num: i32) -> Result<CoordinatesBuilder, ()> {
+    fn sub_row(mut self, num: i32) -> Result<Coordinates, ()> {
         let Ok(_num) = usize::try_from(num) else {
             return Err(());
         };
@@ -88,7 +67,7 @@ impl CoordinatesBuilder {
         Ok(self)
     }
 
-    fn sub_col(mut self, num: i32) -> Result<CoordinatesBuilder, ()> {
+    fn sub_col(mut self, num: i32) -> Result<Coordinates, ()> {
         let Ok(_num) = usize::try_from(num) else {
             return Err(());
         };
@@ -97,13 +76,6 @@ impl CoordinatesBuilder {
         };
         self.col = _num;
         Ok(self)
-    }
-
-    fn build(self) -> Coordinates {
-        Coordinates {
-            row: self.row,
-            col: self.col,
-        }
     }
 }
 
@@ -118,7 +90,7 @@ struct Block {
 impl Block {
     fn new() -> Block {
         let color: Color = rand::random();
-        let coor = Coordinates::new().row(3).col(COLS / 2).build();
+        let coor = Coordinates::new(3, COLS / 2);
         let piece: Piece = rand::random();
         let rotation_pos = rand::thread_rng().gen_range(0..4);
         let position = get_piece_position(piece, rotation_pos, coor).unwrap();
@@ -160,12 +132,8 @@ impl Block {
     }
 
     fn display(&self) -> Vec<String> {
-        let coor = get_piece_position(
-            self.piece,
-            self.rotation_pos,
-            Coordinates::new().row(2).col(2).build(),
-        )
-        .unwrap();
+        let coor =
+            get_piece_position(self.piece, self.rotation_pos, Coordinates::new(2, 2)).unwrap();
         let mut matrix = [[Square::Empty; 6]; 6];
         for i in 0..4 {
             matrix[coor[i].row + 1][coor[i].col + 1] = Square::Occupied(self.color);
@@ -326,7 +294,7 @@ fn get_piece_position(piece: Piece, pos: usize, coor: Coordinates) -> Result<[Co
         ]),
         (_, _) => Err(()),
     };
-    position.map(|coors| coors.map(|coor| Coordinates::new().row(coor[0]).col(coor[1]).build()))
+    position.map(|coors| coors.map(|coor| Coordinates::new(coor[0], coor[1])))
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Copy)]
@@ -655,13 +623,9 @@ impl Tetris {
             .position
             .into_iter()
             .map(|sq| match movement {
-                KeyEvent::Down => Ok(Coordinates::new().row(sq.row + 1).col(sq.col).build()),
-                KeyEvent::Right => Ok(Coordinates::new().row(sq.row).col(sq.col + 1).build()),
-                KeyEvent::Left => Ok(Coordinates::new()
-                    .row(sq.row)
-                    .col(sq.col)
-                    .sub_col(1)?
-                    .build()),
+                KeyEvent::Down => Ok(Coordinates::new(sq.row + 1, sq.col)),
+                KeyEvent::Right => Ok(Coordinates::new(sq.row, sq.col + 1)),
+                KeyEvent::Left => Ok(Coordinates::new(sq.row, sq.col).sub_col(1)?),
                 _ => Err(()),
             })
             .all(|sq| {
