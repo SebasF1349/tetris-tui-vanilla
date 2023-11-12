@@ -496,7 +496,6 @@ impl Tetris {
                             .unwrap();
                             let mut game_state = state.lock().unwrap();
                             *game_state = GameState::Playing;
-                            self.state = GameState::Playing;
                             self.start();
                         }
                         KeyEvent::Quit => break,
@@ -505,29 +504,30 @@ impl Tetris {
                     Ok(GameEvent::Tick) => (),
                     Err(err) => panic!("{}", err),
                 },
-                GameState::Playing => match rx.recv() {
-                    Ok(GameEvent::Key(key)) => match key {
-                        KeyEvent::Quit => break,
-                        KeyEvent::Left => self.block_left(),
-                        KeyEvent::Right => self.block_right(),
-                        KeyEvent::Down => self.block_down(),
-                        KeyEvent::Rotate => self.block_rotate(),
-                        KeyEvent::Play => (),
-                        KeyEvent::Pause => {
-                            let mut game_state = state.lock().unwrap();
-                            *game_state = GameState::Pause;
-                            self.state = GameState::Pause;
-                            self.draw_board();
+                GameState::Playing => {
+                    match rx.recv() {
+                        Ok(GameEvent::Key(key)) => match key {
+                            KeyEvent::Quit => break,
+                            KeyEvent::Left => self.block_left(),
+                            KeyEvent::Right => self.block_right(),
+                            KeyEvent::Down => self.block_down(),
+                            KeyEvent::Rotate => self.block_rotate(),
+                            KeyEvent::Play => (),
+                            KeyEvent::Pause => {
+                                let mut game_state = state.lock().unwrap();
+                                *game_state = GameState::Pause;
+                                self.state = GameState::Pause;
+                            }
+                        },
+                        Ok(GameEvent::Tick) => {
+                            if Err(()) == self.tick() {
+                                self.state = GameState::EndScreen;
+                            }
                         }
-                    },
-                    Ok(GameEvent::Tick) => {
-                        if Err(()) == self.tick() {
-                            self.state = GameState::EndScreen;
-                            self.draw_board();
-                        }
+                        Err(err) => panic!("{}", err),
                     }
-                    Err(err) => panic!("{}", err),
-                },
+                    self.draw_board();
+                }
                 GameState::Pause => match rx.recv() {
                     Ok(GameEvent::Key(key)) => {
                         match key {
@@ -552,7 +552,6 @@ impl Tetris {
                                 *self = Tetris::new();
                                 let mut game_state = state.lock().unwrap();
                                 *game_state = GameState::Playing;
-                                self.state = GameState::Playing;
                                 self.start();
                             }
                             _ => (),
@@ -573,13 +572,10 @@ impl Tetris {
     }
 
     fn tick(&mut self) -> Result<(), ()> {
-        if !self.can_block_move(&self.current_block, KeyEvent::Down) {
+        if !self.can_block_move(KeyEvent::Down) {
             self.add_current_block();
             self.remove_lines_completed();
-            if self.is_end() {
-                return Err(());
-            }
-            if self.is_collision(&self.next_block) {
+            if self.is_end() || self.is_collision(&self.next_block) {
                 return Err(());
             }
             self.current_block = self.next_block;
@@ -587,28 +583,24 @@ impl Tetris {
         } else {
             self.current_block.down();
         }
-        self.draw_board();
         return Ok(());
     }
 
     fn block_down(&mut self) {
-        if self.can_block_move(&self.current_block, KeyEvent::Down) {
+        if self.can_block_move(KeyEvent::Down) {
             self.current_block.down();
-            self.draw_board();
         }
     }
 
     fn block_left(&mut self) {
-        if self.can_block_move(&self.current_block, KeyEvent::Left) {
+        if self.can_block_move(KeyEvent::Left) {
             self.current_block.left();
-            self.draw_board();
         }
     }
 
     fn block_right(&mut self) {
-        if self.can_block_move(&self.current_block, KeyEvent::Right) {
+        if self.can_block_move(KeyEvent::Right) {
             self.current_block.right();
-            self.draw_board();
         }
     }
 
@@ -617,12 +609,11 @@ impl Tetris {
         block.rotate();
         if !self.is_collision(&block) {
             self.current_block = block;
-            self.draw_board();
         }
     }
 
-    fn can_block_move(&self, block: &Block, movement: KeyEvent) -> bool {
-        block
+    fn can_block_move(&self, movement: KeyEvent) -> bool {
+        self.current_block
             .position
             .into_iter()
             .map(|sq| match movement {
@@ -640,9 +631,9 @@ impl Tetris {
     }
 
     fn start(&mut self) {
+        self.state = GameState::Playing;
         self.current_block = Block::new();
-        execute!(stdout(), cursor::MoveTo(0, 0)).unwrap();
-        println!("{}", self);
+        self.draw_board();
     }
 
     fn draw_board(&self) {
@@ -668,10 +659,7 @@ Q => Quit\n\r"
     }
 
     fn is_occupied(&self, coor: Coordinates) -> bool {
-        match self.board[coor.row][coor.col] {
-            Square::Occupied(_) => true,
-            Square::Empty => false,
-        }
+        self.board[coor.row][coor.col] != Square::Empty
     }
 
     fn is_collision(&self, block: &Block) -> bool {
