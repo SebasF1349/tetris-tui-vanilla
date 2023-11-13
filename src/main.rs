@@ -456,8 +456,10 @@ impl Tetris {
                     Err(err) => panic!("{}", err),
                 },
             }
-            execute!(stdout(), cursor::MoveTo(0, 0)).unwrap();
-            println!("{}", self);
+            if self.state != GameState::Menu {
+                execute!(stdout(), cursor::MoveTo(0, 0)).unwrap();
+                println!("{}", self);
+            }
         }
     }
 
