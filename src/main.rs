@@ -56,7 +56,12 @@ impl Coordinates {
         Coordinates { row, col }
     }
 
-    fn sub_row(mut self, num: usize) -> Result<Coordinates, ()> {
+    fn down(mut self, num: usize) -> Coordinates {
+        self.row += num;
+        self
+    }
+
+    fn up(mut self, num: usize) -> Result<Coordinates, ()> {
         let Some(_num) = self.row.checked_sub(num) else {
             return Err(());
         };
@@ -64,12 +69,17 @@ impl Coordinates {
         Ok(self)
     }
 
-    fn sub_col(mut self, num: usize) -> Result<Coordinates, ()> {
+    fn left(mut self, num: usize) -> Result<Coordinates, ()> {
         let Some(_num) = self.col.checked_sub(num) else {
             return Err(());
         };
         self.col = _num;
         Ok(self)
+    }
+
+    fn right(mut self, num: usize) -> Coordinates {
+        self.col += num;
+        self
     }
 }
 
@@ -172,124 +182,29 @@ impl Distribution<Piece> for Standard {
 
 fn get_piece_position(piece: Piece, pos: usize, coor: Coordinates) -> Result<[Coordinates; 4], ()> {
     match (piece, pos) {
-        (Piece::I, p) if p % 2 == 1 => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col).sub_row(1)?,
-            Coordinates::new(coor.row, coor.col).sub_row(2)?,
-            Coordinates::new(coor.row + 1, coor.col),
-        ]),
-        (Piece::I, p) if p % 2 == 0 => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col + 1),
-            Coordinates::new(coor.row, coor.col + 2),
-            Coordinates::new(coor.row, coor.col).sub_col(1)?,
-        ]),
-        (Piece::J, 0) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col).sub_col(1)?,
-            Coordinates::new(coor.row, coor.col + 1),
-            Coordinates::new(coor.row + 1, coor.col + 1),
-        ]),
-        (Piece::J, 1) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col).sub_row(1)?,
-            Coordinates::new(coor.row + 1, coor.col),
-            Coordinates::new(coor.row + 1, coor.col).sub_col(1)?,
-        ]),
-        (Piece::J, 2) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col + 1),
-            Coordinates::new(coor.row, coor.col).sub_col(1)?,
-            Coordinates::new(coor.row, coor.col)
-                .sub_col(1)?
-                .sub_row(1)?,
-        ]),
-        (Piece::J, 3) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col).sub_row(1)?,
-            Coordinates::new(coor.row, coor.col + 1).sub_row(1)?,
-            Coordinates::new(coor.row + 1, coor.col),
-        ]),
-        (Piece::L, 0) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col + 1),
-            Coordinates::new(coor.row, coor.col).sub_col(1)?,
-            Coordinates::new(coor.row, coor.col + 1).sub_row(1)?,
-        ]),
-        (Piece::L, 1) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col).sub_row(1)?,
-            Coordinates::new(coor.row + 1, coor.col),
-            Coordinates::new(coor.row + 1, coor.col + 1),
-        ]),
-        (Piece::L, 2) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col + 1),
-            Coordinates::new(coor.row, coor.col).sub_col(1)?,
-            Coordinates::new(coor.row + 1, coor.col).sub_col(1)?,
-        ]),
-        (Piece::L, 3) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row + 1, coor.col),
-            Coordinates::new(coor.row, coor.col).sub_row(1)?,
-            Coordinates::new(coor.row, coor.col)
-                .sub_row(1)?
-                .sub_col(1)?,
-        ]),
-        (Piece::T, 0) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col).sub_col(1)?,
-            Coordinates::new(coor.row, coor.col + 1),
-            Coordinates::new(coor.row + 1, coor.col),
-        ]),
-        (Piece::T, 1) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row + 1, coor.col),
-            Coordinates::new(coor.row, coor.col).sub_row(1)?,
-            Coordinates::new(coor.row, coor.col).sub_col(1)?,
-        ]),
-        (Piece::T, 2) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col + 1),
-            Coordinates::new(coor.row, coor.col).sub_col(1)?,
-            Coordinates::new(coor.row, coor.col).sub_row(1)?,
-        ]),
-        (Piece::T, 3) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col).sub_row(1)?,
-            Coordinates::new(coor.row + 1, coor.col),
-            Coordinates::new(coor.row, coor.col + 1),
-        ]),
-        (Piece::S, p) if p % 2 == 1 => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col).sub_row(1)?,
-            Coordinates::new(coor.row, coor.col + 1),
-            Coordinates::new(coor.row + 1, coor.col + 1),
-        ]),
-        (Piece::S, _) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col).sub_col(1)?,
-            Coordinates::new(coor.row, coor.col).sub_row(1)?,
-            Coordinates::new(coor.row, coor.col + 1).sub_row(1)?,
-        ]),
-        (Piece::Z, p) if p % 2 == 1 => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row + 1, coor.col),
-            Coordinates::new(coor.row, coor.col + 1),
-            Coordinates::new(coor.row, coor.col + 1).sub_row(1)?,
-        ]),
-        (Piece::Z, _) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col).sub_col(1)?,
-            Coordinates::new(coor.row + 1, coor.col),
-            Coordinates::new(coor.row + 1, coor.col + 1),
-        ]),
-        (Piece::O, _) => Ok([
-            Coordinates::new(coor.row, coor.col),
-            Coordinates::new(coor.row, coor.col + 1),
-            Coordinates::new(coor.row, coor.col).sub_row(1)?,
-            Coordinates::new(coor.row, coor.col + 1).sub_row(1)?,
-        ]),
+        (Piece::I, p) if p % 2 == 1 => Ok([coor, coor.up(1)?, coor.up(2)?, coor.down(1)]),
+        (Piece::I, p) if p % 2 == 0 => Ok([coor, coor.right(1), coor.right(2), coor.left(1)?]),
+        (Piece::J, 0) => Ok([coor, coor.left(1)?, coor.right(1), coor.down(1).right(1)]),
+        (Piece::J, 1) => Ok([coor, coor.up(1)?, coor.down(1), coor.right(1).left(1)?]),
+        (Piece::J, 2) => Ok([coor, coor.right(1), coor.left(1)?, coor.left(1)?.up(1)?]),
+        (Piece::J, 3) => Ok([coor, coor.up(1)?, coor.right(1).up(1)?, coor.down(1)]),
+        (Piece::L, 0) => Ok([coor, coor.right(1), coor.left(1)?, coor.right(1).up(1)?]),
+        (Piece::L, 1) => Ok([coor, coor.up(1)?, coor.down(1), coor.down(1).right(1)]),
+        (Piece::L, 2) => Ok([coor, coor.right(1), coor.left(1)?, coor.down(1).left(1)?]),
+        (Piece::L, 3) => Ok([coor, coor.down(1), coor.up(1)?, coor.up(1)?.left(1)?]),
+        (Piece::T, 0) => Ok([coor, coor.left(1)?, coor.right(1), coor.down(1)]),
+        (Piece::T, 1) => Ok([coor, coor.down(1), coor.up(1)?, coor.left(1)?]),
+        (Piece::T, 2) => Ok([coor, coor.right(1), coor.left(1)?, coor.up(1)?]),
+        (Piece::T, 3) => Ok([coor, coor.up(1)?, coor.down(1), coor.right(1)]),
+        (Piece::S, p) if p % 2 == 1 => {
+            Ok([coor, coor.up(1)?, coor.right(1), coor.down(1).right(1)])
+        }
+        (Piece::S, _) => Ok([coor, coor.left(1)?, coor.up(1)?, coor.right(1).up(1)?]),
+        (Piece::Z, p) if p % 2 == 1 => {
+            Ok([coor, coor.down(1), coor.right(1), coor.right(1).up(1)?])
+        }
+        (Piece::Z, _) => Ok([coor, coor.left(1)?, coor.down(1), coor.down(1).right(1)]),
+        (Piece::O, _) => Ok([coor, coor.right(1), coor.up(1)?, coor.right(1).up(1)?]),
         (_, _) => Err(()),
     }
 }
@@ -605,9 +520,9 @@ impl Tetris {
             .position
             .into_iter()
             .map(|sq| match movement {
-                KeyEvent::Down => Ok(Coordinates::new(sq.row + 1, sq.col)),
-                KeyEvent::Right => Ok(Coordinates::new(sq.row, sq.col + 1)),
-                KeyEvent::Left => Ok(Coordinates::new(sq.row, sq.col).sub_col(1)?),
+                KeyEvent::Down => Ok(sq.down(1)),
+                KeyEvent::Right => Ok(sq.right(1)),
+                KeyEvent::Left => Ok(sq.left(1)?),
                 _ => Err(()),
             })
             .all(|sq| {
