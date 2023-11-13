@@ -113,10 +113,8 @@ impl Block {
     }
 
     fn left(&mut self) {
-        if self.position.into_iter().all(|sq| sq.col > 0) {
-            for pos in self.position.iter_mut() {
-                pos.col -= 1
-            }
+        for pos in self.position.iter_mut() {
+            pos.col -= 1
         }
     }
 
