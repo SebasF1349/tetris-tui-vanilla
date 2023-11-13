@@ -494,9 +494,8 @@ impl Tetris {
                                 cursor::MoveTo(0, 0)
                             )
                             .unwrap();
-                            let mut game_state = state.lock().unwrap();
-                            *game_state = GameState::Playing;
-                            self.start();
+                            self.change_state(&state, GameState::Playing);
+                            self.current_block = Block::new();
                         }
                         KeyEvent::Quit => break,
                         _ => (),
@@ -504,40 +503,28 @@ impl Tetris {
                     Ok(GameEvent::Tick) => (),
                     Err(err) => panic!("{}", err),
                 },
-                GameState::Playing => {
-                    match rx.recv() {
-                        Ok(GameEvent::Key(key)) => match key {
-                            KeyEvent::Quit => break,
-                            KeyEvent::Left => self.block_left(),
-                            KeyEvent::Right => self.block_right(),
-                            KeyEvent::Down => self.block_down(),
-                            KeyEvent::Rotate => self.block_rotate(),
-                            KeyEvent::Play => (),
-                            KeyEvent::Pause => {
-                                let mut game_state = state.lock().unwrap();
-                                *game_state = GameState::Pause;
-                                self.state = GameState::Pause;
-                            }
-                        },
-                        Ok(GameEvent::Tick) => {
-                            if Err(()) == self.tick() {
-                                self.state = GameState::EndScreen;
-                            }
+                GameState::Playing => match rx.recv() {
+                    Ok(GameEvent::Key(key)) => match key {
+                        KeyEvent::Quit => break,
+                        KeyEvent::Left => self.block_left(),
+                        KeyEvent::Right => self.block_right(),
+                        KeyEvent::Down => self.block_down(),
+                        KeyEvent::Rotate => self.block_rotate(),
+                        KeyEvent::Play => (),
+                        KeyEvent::Pause => self.change_state(&state, GameState::Pause),
+                    },
+                    Ok(GameEvent::Tick) => {
+                        if Err(()) == self.tick() {
+                            self.state = GameState::EndScreen;
                         }
-                        Err(err) => panic!("{}", err),
                     }
-                    self.draw_board();
-                }
+                    Err(err) => panic!("{}", err),
+                },
                 GameState::Pause => match rx.recv() {
                     Ok(GameEvent::Key(key)) => {
                         match key {
                             KeyEvent::Quit => break,
-                            KeyEvent::Pause => {
-                                let mut game_state = state.lock().unwrap();
-                                *game_state = GameState::Playing;
-                                self.state = GameState::Playing;
-                                self.draw_board();
-                            }
+                            KeyEvent::Pause => self.change_state(&state, GameState::Playing),
                             _ => (),
                         };
                     }
@@ -550,9 +537,8 @@ impl Tetris {
                             KeyEvent::Quit => break,
                             KeyEvent::Play => {
                                 *self = Tetris::new();
-                                let mut game_state = state.lock().unwrap();
-                                *game_state = GameState::Playing;
-                                self.start();
+                                self.change_state(&state, GameState::Playing);
+                                self.current_block = Block::new();
                             }
                             _ => (),
                         };
@@ -561,7 +547,15 @@ impl Tetris {
                     Err(err) => panic!("{}", err),
                 },
             }
+            execute!(stdout(), cursor::MoveTo(0, 0)).unwrap();
+            println!("{}", self);
         }
+    }
+
+    fn change_state(&mut self, state: &Arc<Mutex<GameState>>, new_state: GameState) {
+        let mut game_state = state.lock().unwrap();
+        *game_state = new_state.clone();
+        self.state = new_state;
     }
 
     fn add_current_block(&mut self) {
@@ -628,17 +622,6 @@ impl Tetris {
                     && sq.unwrap().row < ROWS
                     && !self.is_occupied(sq.unwrap())
             })
-    }
-
-    fn start(&mut self) {
-        self.state = GameState::Playing;
-        self.current_block = Block::new();
-        self.draw_board();
-    }
-
-    fn draw_board(&self) {
-        execute!(stdout(), cursor::MoveTo(0, 0)).unwrap();
-        println!("{}", self);
     }
 
     fn draw_menu(&self) {
