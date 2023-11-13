@@ -56,22 +56,16 @@ impl Coordinates {
         Coordinates { row, col }
     }
 
-    fn sub_row(mut self, num: i32) -> Result<Coordinates, ()> {
-        let Ok(_num) = usize::try_from(num) else {
-            return Err(());
-        };
-        let Some(_num) = self.row.checked_sub(_num) else {
+    fn sub_row(mut self, num: usize) -> Result<Coordinates, ()> {
+        let Some(_num) = self.row.checked_sub(num) else {
             return Err(());
         };
         self.row = _num;
         Ok(self)
     }
 
-    fn sub_col(mut self, num: i32) -> Result<Coordinates, ()> {
-        let Ok(_num) = usize::try_from(num) else {
-            return Err(());
-        };
-        let Some(_num) = self.col.checked_sub(_num) else {
+    fn sub_col(mut self, num: usize) -> Result<Coordinates, ()> {
+        let Some(_num) = self.col.checked_sub(num) else {
             return Err(());
         };
         self.col = _num;
