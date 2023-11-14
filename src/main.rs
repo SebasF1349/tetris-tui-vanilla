@@ -242,13 +242,13 @@ impl ToString for Square {
     fn to_string(&self) -> String {
         match self {
             Square::Empty => String::from("  "),
-            Square::Occupied(Color::Red) => String::from('\u{1F7E5}'),
-            Square::Occupied(Color::Blue) => String::from('\u{1F7E6}'),
-            Square::Occupied(Color::Orange) => String::from('\u{1F7E7}'),
-            Square::Occupied(Color::Yellow) => String::from('\u{1F7E8}'),
-            Square::Occupied(Color::Green) => String::from('\u{1F7E9}'),
-            Square::Occupied(Color::Violet) => String::from('\u{1F7EA}'),
-            Square::Occupied(Color::Brown) => String::from('\u{1F7EB}'),
+            Square::Occupied(Color::Red) => String::from("\u{1F7E5}"),
+            Square::Occupied(Color::Blue) => String::from("\u{1F7E6}"),
+            Square::Occupied(Color::Orange) => String::from("\u{1F7E7}"),
+            Square::Occupied(Color::Yellow) => String::from("\u{1F7E8}"),
+            Square::Occupied(Color::Green) => String::from("\u{1F7E9}"),
+            Square::Occupied(Color::Violet) => String::from("\u{1F7EA}"),
+            Square::Occupied(Color::Brown) => String::from("\u{1F7EB}"),
         }
     }
 }
