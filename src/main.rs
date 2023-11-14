@@ -183,7 +183,7 @@ fn get_piece_position(piece: Piece, pos: usize, coor: Coordinates) -> Result<[Co
         (Piece::I, p) if p % 2 == 1 => Ok([coor, coor.up(1)?, coor.up(2)?, coor.down(1)]),
         (Piece::I, p) if p % 2 == 0 => Ok([coor, coor.right(1), coor.right(2), coor.left(1)?]),
         (Piece::J, 0) => Ok([coor, coor.left(1)?, coor.right(1), coor.down(1).right(1)]),
-        (Piece::J, 1) => Ok([coor, coor.up(1)?, coor.down(1), coor.right(1).left(1)?]),
+        (Piece::J, 1) => Ok([coor, coor.up(1)?, coor.down(1), coor.down(1).left(1)?]),
         (Piece::J, 2) => Ok([coor, coor.right(1), coor.left(1)?, coor.left(1)?.up(1)?]),
         (Piece::J, 3) => Ok([coor, coor.up(1)?, coor.right(1).up(1)?, coor.down(1)]),
         (Piece::L, 0) => Ok([coor, coor.right(1), coor.left(1)?, coor.right(1).up(1)?]),
