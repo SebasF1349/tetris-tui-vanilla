@@ -137,22 +137,14 @@ impl Block {
     }
 
     fn display(&self) -> Vec<String> {
-        let coor =
-            get_piece_position(self.piece, self.rotation_pos, Coordinates::new(2, 2)).unwrap();
-        let mut matrix = [[Square::Empty; 6]; 6];
+        let mut matrix = [[Square::Empty; COLS / 2 + 2]; 4];
         for i in 0..4 {
-            matrix[coor[i].row + 1][coor[i].col + 1] = Square::Occupied(self.color);
+            matrix[self.position[i].row - 1][self.position[i].col] = Square::Occupied(self.color);
         }
-        let mut output: Vec<String> = matrix
+        matrix
             .iter_mut()
-            .map(|val| {
-                let ret: Vec<String> = val.iter().map(|num| num.to_string()).collect();
-                ret.join("")
-            })
-            .collect();
-        output.retain(|val| !val.trim().is_empty());
-        output.resize(4, " ".to_string().repeat(12));
-        output
+            .map(|val| val.iter().map(|num| num.to_string()).collect::<String>())
+            .collect::<Vec<String>>()
     }
 }
 
