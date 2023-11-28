@@ -94,10 +94,13 @@ struct Block {
 impl Block {
     fn new() -> Block {
         let color: Color = rand::random();
-        let coor = Coordinates::new(3, COLS / 2);
+        let coor = Coordinates::new(3, COLS / 2 - 1);
         let piece: Piece = rand::random();
         let rotation_pos = rand::thread_rng().gen_range(0..4);
-        let position = get_piece_position(piece, rotation_pos, coor).unwrap();
+        let mut position = get_piece_position(piece, rotation_pos, coor).unwrap();
+        if position.iter().all(|pos| pos.row != 4) {
+            position = position.map(|pos| pos.down(1));
+        }
         Block {
             position,
             color,
