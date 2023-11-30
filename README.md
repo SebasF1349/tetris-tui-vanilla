@@ -6,4 +6,4 @@ If you want to play too you can clone this repo and then run
 
 `cargo run`
 
-(You need to have Rust installed)
+(you need to have Rust installed), or you can download linux and windows binaries in the releases page.
