@@ -321,11 +321,11 @@ impl Display for Tetris {
                     5 => format!("    Points: {} ", &self.points.to_string()),
                     7 => format!("    {} ", &self.state.print_message()[0]),
                     8 => format!("    {} ", &self.state.print_message()[1]),
-                    10 => format!("{}", &next[0]),
-                    11 => format!("{}", &next[1]),
-                    12 => format!("{}", &next[2]),
-                    13 => format!("{}", &next[3]),
-                    _ => format!(""),
+                    10 => next[0].to_string(),
+                    11 => next[1].to_string(),
+                    12 => next[2].to_string(),
+                    13 => next[3].to_string(),
+                    _ => String::new(),
                 };
                 format!("\u{2590}{}\u{258C}{}", ret.join(""), right_menu)
             })
@@ -369,15 +369,12 @@ impl Tetris {
 
         {
             let tx = tx.clone();
-            thread::spawn(move || loop {
-                loop {
-                    let stdin = &mut std::io::stdin();
+            thread::spawn(move || {
+                let stdin = &mut std::io::stdin();
 
-                    loop {
-                        match get_input(stdin) {
-                            Some(k) => tx.send(GameEvent::Key(k)).unwrap(),
-                            None => (),
-                        }
+                loop {
+                    if let Some(k) = get_input(stdin) {
+                        tx.send(GameEvent::Key(k)).unwrap()
                     }
                 }
             });
@@ -481,7 +478,7 @@ impl Tetris {
         } else {
             self.current_block.down();
         }
-        return Ok(());
+        Ok(())
     }
 
     fn block_down(&mut self) {
@@ -503,7 +500,7 @@ impl Tetris {
     }
 
     fn block_rotate(&mut self) {
-        let mut block = self.current_block.clone();
+        let mut block = self.current_block;
         block.rotate();
         if !self.is_collision(&block) {
             self.current_block = block;
